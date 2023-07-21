@@ -1342,7 +1342,7 @@ code：https://github.com/xiaomabufei/CAT
 $$
 S_i=(norm(s_o))^{W_m}.(\underset{1\leq j\leq |P^I|}{max}(IOU(P^I_j,P^m_i)))^{W_I} \tag{1}
 $$
-其中$W_m和W_I$为自适应权重，由Measure、Sensor以及Adjuster函数约束；
+其中$W_m和W_I$为模型、输入驱动的自适应权重，由Measure、Sensor以及Adjuster函数约束；
 $$
 W^t=Adjuster(W^{t-1},Sensor(Measure(L_m))) \tag{2}
 $$
