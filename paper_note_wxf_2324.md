@@ -1,4 +1,4 @@
-# 笔记
+笔记
 
 ## 20230901
 
@@ -758,6 +758,809 @@ ROLNet 模块利用 REW 得分和无分类头的目标定位网络（OLN）进�
 
 * 背景大差不差所以重构损失小，前景各有不同所以重构差异大；以此来选择合适的未知类（前景）伪候选框。
 
+## 20231020
+
+### 15_Bridging the Gap: Learning Pace Synchronization for Open-World Semi-Supervised Learning_arxiv 202309_无代码
+
+> 作者：Bo Ye, Kai Gan, Tong Wei†, Min-Ling Zhang
+
+> 贡献：
+
+背景: 在开放世界半监督学习中，已知类别和新类别之间存在着显著的学习差距。
+
+![image-20231016174131143](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231016174131143.png)
+
+目前的方法通常假设未标记数据仅包含已知类别的样本，而忽略了其中可能存在的新类别样本。已有的开放世界半监督学习方法在解决这个问题时采用了两个策略：一是识别已知类别的未标记样本并分配伪标签，二是自动聚类新类别的未标记样本。然而，这些方法在实际应用中仍然存在一些问题，特别是在新类别的学习上。
+
+鉴于已知类别和新类别之间的学习差距，本文提出了一种新的方法来同步学习步调，以平衡已知类别和新类别的学习。通过自适应边界损失和伪标签对比聚类，提高新类别的发现和学习效果。
+
+> 方法：
+
+本文方法 LPS 旨在同步 OpenSSL 中已知和新颖类别的学习速度。
+
+* 引入自适应边界损失（LAM），通过引入**类依赖边界**来调节已知类别的学习速度；
+* 结合了伪标签对比聚类损失（LPC），通过在输出空间中将可能来自同一类别的样本聚集在一起来增强新颖类别的发现。
+* 利用多个正负对作为监督信号，并结合对置信度较低的无标签样本进行无监督对比学习。
+
+![image-20231016174018124](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231016174018124.png)
+
+**Adaptive Distribution-Aware Margin**
+
+为了缓解 seen 类和 novel 类学习速度差异问题，作者提出了一种**分布感知的边际损失机制**，旨在引导模型的注意力转向 novel 类的学习。值得注意的是，随着模型的预测类分布接近潜在的（类平衡）分布，这种边际减小。
+
+![image-20231016180805489](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231016180805489.png)
+
+**Pseudo-Label Contrastive Clustering**
+
+与现有的工作不同，本文引入了一种新的聚类方法，监督对比学习驱动的聚类，以充分利用可靠的模型预测作为监督信号。
+
+在一个 mini batch 中，有标签的样本 和 预测置信度高的样本 均会被作为 $B_{l}$ 来计算对比损失；
+
+![image-20231016181201672](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231016181201672.png)
+
+**Unsupervised Contrastive Learning**
+
+(7) 式通过具有高预测置信度的未标记样本来**增强**标记数据集，作者考虑是否可以使用具有低预测置信度的未标记样本来丰富表示学习。为了实现这一点，采用无监督对比学习来鼓励类似的预测，而不是给定样本和增强对应样本之间的嵌入。
+
+![image-20231016181511128](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231016181511128.png)
+
+> 总结：
+
+* 聚类时，使用高预测置信度的未标记样本来**增强**标记数据集
+
+### 16_CoTDet: Affordance Knowledge Prompting for Task Driven Object Detection_arxiv 202309_有代码链接
+
+> 作者：Jiajin Tang*, Ge Zheng*, Jingyi Yu, Sibei Yang
+
+> 代码：https://toneyaya.github.io/cotdet/
+
+> 贡献：
+
+背景: 传统的物体检测任务旨在在图像中检测给定类别的物体实例，但在实际应用中，任务驱动的物体检测更关注的是检测适合完成特定任务的物体实例。然而，由于任务所需的物体类别过于多样化，直接将物体的视觉特征或类别与任务进行映射无法解决这一挑战。
+
+以往的方法通过学习物体的视觉上下文特征或类别之间的映射来解决任务驱动的物体检测问题，但效果不理想。这些方法无法充分考虑到任务所需的**常识知识**，导致错误的物体选择。
+
+ 鉴于大型语言模型（LLMs）在编码世界知识方面的出色能力，本文提出了一种新颖的方法，通过从 LLMs 中提取 Affordance 知识，对任务和物体之间建立联系。此外，本文还提出了一种知识条件检测框架，通过利用 Affordance 知识来指导物体检测和定位，从而更好地利用知识来提高检测性能。
+
+> 方法：
+
+本文提出的方法 ==CoTDet== 旨在通过获取**视觉可行性知识**并利用其来检测适合给定任务的物体实例，从而弥合任务驱动的目标检测与传统目标检测之间的差距。该方法包括以下几个步骤：
+
+* 获取视觉可行性知识：作者提出了一种多级思维链（MLCoT）的方法，从大型语言模型（LLMs）中提取视觉可行性知识。这涉及生成代表性的物体示例，并为这些物体能够完成任务提供理由。MLCoT 能捕捉超越物体类别的视觉可行性的本质；
+
+* 知识条件检测框架：作者提出了一种知识条件检测框架 CoTDet，该框架将检测器与视觉可行性知识相结合。该框架生成物体查询并使用视觉可行性知识指导框回归。另外，作者还使用去噪训练来教导解码器如何利用视觉知识进行框回归。
+
+  （扩展到实例分割：CoTDet 网络可以通过使用分割头部进行任务驱动的实例分割而进行轻松扩展。）
+
+![image-20231017102809742](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017102809742.png)
+
+**Visual Affordance Knowledge from LLMs**：为了检测以提供特定任务的对象，自然会首先考虑任务的需求，然后定位满足需求的合适对象。然而，任务要求是抽象的，不能直接对应于图像中的视觉内容来定位对象。基于此，作者建议显式地提取常见的视觉属性（即视觉启示），这些属性使不同的对象能够负担任务，并使用视觉启示来连接图像中的任务需求和对象实例。
+
+​		 **Multi-Level Chain-of-Thought Prompting**：
+
+​				**Object-level Prompting as Brainstorming**：在第一级中，提示 llm 生成提供输入任务 S 的日常对象示例。但是这是不可行的，因为： (1) 对象示例过于局限于部分对象类别，导致了对象类别与实际任务需求之间的差距。例如，图2中的fork不在 llm 返回的对象之中；(2) 可能会输出一些有噪声的不合适的对象。虽然有噪声的对象很少，但完全依赖于这些对象的示例是有风险的。例如，对于灭火任务，llm归还火斧，一种常见的消防工具，但它不能直接用于灭火。
+
+​				**Affordance-level Prompting with Rationales**：为了解决上述挑战，并捕捉在代表性对象例子中隐含的基本视觉启示，作者提出为这些对象为什么能够承担任务生成理由，并从理由中总结视觉启示。
+
+​		**Knowledge-conditioned Decoder**：
+
+​				首先得到任务驱动的特征，然后结合前面提取的 common 视觉属性知识。
+
+​				**Knowledge-conditional Query Generation**：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017103448000.png" alt="image-20231017103448000" style="zoom:80%;" />
+
+​		   	 **Knowledge-conditional Decoding**：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017103532086.png" alt="image-20231017103532086" style="zoom:80%;" />
+
+> 总结：
+
+* 文中的泛化思想：从某几个常见对象中提取 common visual attributes 从而泛化到新的对象
+
+## 20231027
+
+### 17_Deep Feature Deblurring Diffusion for Detecting Out-of-Distribution Objects_ICCV 2023_有代码
+
+> 作者：Aming Wu1 Da Chen2 Cheng Deng1*
+
+> 代码：https://github.com/AmingWu/DFDD-OOD
+
+> 贡献：
+
+背景: 无监督的分布外对象检测（OOD-OD）任务的目标是在没有访问任何分布外数据的情况下检测未见过的分布外对象。
+
+传统的对象检测模型通常遵循封闭集假设，即训练和测试阶段共享相同的类别空间。然而，实际场景中存在大量未知对象，这对基于封闭集假设的检测器提出了重大挑战。
+
+为了解决这个问题，无监督的分布外对象检测任务被提出，旨在只利用已知分布数据来提高区分分布外对象的能力，并避免降低对已知分布对象检测的性能。
+
+为了解决无监督的分布外对象检测任务中的两个关键挑战，即如何利用已知分布数据提高区分分布外对象的能力以及如何避免降低对已知分布对象检测的性能，本文从扩散模型的角度出发，提出了深度特征去模糊扩散（==DFDD==）方法。通过前向模糊和反向去模糊过程，合成接近已知分布对象和分布外对象分类边界的虚拟分布外特征，从而提高对象分类器的区分能力。**前向过程**逐渐对提取的特征进行高斯模糊，以合成接近 ID 和 OOD 目标分类边界的虚拟 OOD 特征；**反向过程**恢复前向过程中丢失的细节。
+
+> 方法：
+
+DFDD 利用扩散模型的思想合成虚拟的离群分布（OOD）特征，提高检测OOD目标的能力。该方法包括两个主要过程：前向模糊扩散和反向去模糊过程。
+
+在前向过程中，逐渐对提取的特征图应用高斯模糊，得到虚拟的OOD图；
+
+在反向过程中，使用 U-Net 结构模型对模糊特征进行去模糊处理，恢复原始特征。恢复的特征和原始特征用于训练，增强目标分类器的区分能力。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018143953657.png" alt="image-20231018143953657" style="zoom:80%;" />
+
+**Deep Feature Deblurring Diffusion**
+
+作者通过实验发现，直接添加噪声可能会阻碍扩散模型在特征生成的应用。为此，探索用高斯模糊代替添加噪声。
+
+**Forward Blurring Diffusion**：
+
+为了减轻缺乏 OOD 数据的影响，利用正向过程来合成虚拟 OOD 特性。具体来说，扩散过程被固定为一个马尔可夫链，该链根据方差调度 σ1，...，σT 逐步对提取的特征图执行高斯模糊：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018145007276.png" alt="image-20231018145007276" style="zoom:80%;" />
+
+为了保证模糊效果，方差呈线性增加。作者忽略了内核大小可以更改的事实，而是将大小固定为5×5，正向过程没有可学习的参数。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018145102045.png" alt="image-20231018145102045" style="zoom:80%;" />
+
+**Reverse Deblurring Process**：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018145134984.png" alt="image-20231018145134984" style="zoom:80%;" />
+
+在训练过程中，使用损失函数 $L_{DFDD}$ 来训练所设计的 U-Net 模型，使其具有细节预测的能力：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018145256750.png" alt="image-20231018145256750" style="zoom:80%;" />
+
+**DFDD-Driven OOD Object Detection**：
+
+目标检测任务包括目标定位和分类。因此，加强特征 F0 中与目标相关的信息有利于准确地检测目标。如图 2 所示，首先在 F0 和模糊特征 FT 之间进行残差操作，**其输出涉及到丰富的对象结构信息**。然后，将剩余输出与 F0 连接，得到增强的结果。
+
+对于 ID ：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018150101285.png" alt="image-20231018150101285" style="zoom:80%;" />
+
+对于 OOD：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018150117631.png" alt="image-20231018150117631" style="zoom:80%;" />
+
+总体训练目标：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018150139698.png" alt="image-20231018150139698" style="zoom:80%;" />
+
+**Inference for OOD Object Detection**
+
+通过设定的阈值决定被测样例是 ID 还是 OOD：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018150229679.png" alt="image-20231018150229679" style="zoom:80%;" />
+
+算法伪代码：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231018150256699.png" alt="image-20231018150256699" style="zoom:80%;" />
+
+> 总结：
+
+* 使用扩散模型的思想，通过对 ID 样本特征添加高斯噪声的方式合成虚拟 OOD 特征（特征合成扩散版）
+* 比较有意思的做法：用 (F0 - FT) 拼接到原来的 F0 上面去，起到一个信息增强的作用==！！！==
+
+* mark：等代码放出来了看下代码
+
+### 18_COCO-O: A Benchmark for Object Detectors under Natural Distribution Shifts_ICCV 2023_有代码
+
+> 作者：Xiaofeng Mao, Yuefeng Chen, Yao Zhu, Da Chen, Hang Su, Rong Zhang, Hui Xue
+
+> 代码：https://github.com/alibaba/easyrobust/tree/main/benchmarks/coco_o
+
+> 贡献：
+
+背景: 深度学习在计算机视觉领域取得了巨大成功，但实际目标检测应用在**自然分布偏移**的图像输入上可能失去效果。为了解决这个问题，研究界开始关注目标检测器在分布偏移下的鲁棒性。
+
+ 过去的研究主要集中在分类任务的鲁棒性上，而对于目标检测等其他视觉任务的鲁棒性研究相对较少。现有的鲁棒性基准数据集也存在一些问题，如缺乏普适性和领域多样性。
+
+鉴于过去的研究和现有的基准数据集的限制，本研究提出了 ==COCO-O== 数据集，旨在评估目标检测器在自然分布偏移下的鲁棒性。通过对该数据集上的实验，可以更全面地评估现代目标检测器的鲁棒性，并探索影响鲁棒性的因素，从而为未来的目标检测算法提供指导。
+
+> 方法：
+
+测试数据种类（如下右图 6 种）：
+
+|                         | COCO-O | Sketch | Weather | Carton | Painting | Tatto | Handmake |
+| ----------------------- | ------ | ------ | ------- | ------ | -------- | ----- | -------- |
+| images                  | 6783   | 992    | 961     | 1996   | 954      | 918   | 961      |
+| labelled bounding boxes | 26624  | 3707   | 4509    | 8774   | 4879     | 3266  | 3266     |
+
+![image-20231023193558116](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231023193558116.png)
+
+数据收集方式：
+
+通过使用来自 COCO 的 OOD 场景关键词和对象类别的组合来搜索互联网来收集COCO-O图像。例如，“卡通+狗”的目的是收集动画狗的图像。一般来说，“卡通+dog”搜索的大多数图像都是标志性的（单个高质量的物体以图像为中心，很容易定位）。为了获得更多的非标志性图像，遵循 COCO 中使用的方法，在关键词组合中添加更多的对象类别，如“卡通+dog+car”。手动控制每个关键字组合检索到的图像数量，以确保类别之间的平衡。对于只返回少量图像的组合，如“fog+bowl+tv”，尝试使用多个搜索引擎来收集更多的图像。
+
+评价标准：
+
+Effective Robustness
+
+![image-20231023194929168](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231023194929168.png)
+
+
+
+**分析检测器架构、增强方式、预训练对 OOD 鲁棒性的影响**
+
+评价结果：
+
+**Robustness vs. Detection Architecture**：
+
+具有更高的 COCO mAP 的检测架构并不意味着更好的鲁棒性；
+
+相比于 neck 和 head 的先进技术对鲁棒性的影响，backbone 扮演着更重要的角色。
+
+**Robustness vs. Augmentations**：
+
+所有的增强方式都有助于增强模型的健壮性；
+
+MixUp 对于实现目标检测的领域泛化能力效果最好。
+
+![image-20231023195323630](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231023195323630.png)
+
+**Robustness vs. Pre-training**：
+
+当使用 ImageNet-1K 进行预训练时，检测器变得更加鲁棒，所获得的鲁棒性取决于一个适当的预训练方法。
+
+![image-20231023195404078](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231023195404078.png)
+
+## 20231103
+
+### 19_Anomaly Detection under Distribution Shift_ICCV 2023_有代码
+
+> 作者：Tri Cao, Jiawen Zhu, and Guansong Pang*
+
+> 代码：https://github.com/mala-lab/ADShift
+
+> 贡献：
+
+背景: 异常检测旨在从一组正常训练样本中学习模式，以识别测试数据中的异常样本。然而，现有的异常检测方法通常假设训练和测试数据来自相同的数据分布，而在实际应用中，由于不同的自然变化（如光照条件、物体姿态或背景外观），测试数据可能存在较大的分布偏移，导致现有方法在这种情况下效果不佳。
+
+ 过去的研究主要集中在无监督的异常检测方法上，如基于单类分类、基于重构的方法和自监督学习方法。然而，这些方法都假设训练和测试数据来自相同的分布，无法有效应对分布偏移的问题。
+
+鉴于现有方法在分布偏移下的异常检测问题上的不足，本研究旨在提出一种新的方法，通过学习 generalized normality 表示来解决分布偏移下的异常检测问题。该方法在无监督的情况下**最小化训练和推断阶段中的分布差异**，从而能够在各种分布偏移的数据上取得更好的性能。
+
+> 方法：
+
+generalized normality learning（==GNL==）由两个主要组成部分组成：分布不变正态性学习和分布偏移下的异常检测的测试时增强。
+GNL 建立在 RD4AD 模型的基础上，在分布不变 normality 学习中，引入了保持 normality 的损失函数 $L_{abs}和L_{lowf}$。该损失函数量化了原始样本的嵌入特征与每个转换的正常样本的嵌入特征之间的差异。该损失函数加在编码器的瓶颈层和最终块处。通过最小化这个损失函数，GNL能够学习到分布不变的 normality 表示。
+测试时增强组件解决测试过程中的分布偏移问题。GNL 使用特征分布匹配（FDM）在教师编码器的多层级层次上将训练分布注入到推理样本中。这种增强应用于教师编码器的前两个残差块。推理过程和异常得分计算遵循原始 RD4AD 框架。
+
+![image-20231017190451944](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017190451944.png)
+
+**Distribution-invariant Normality Learning**
+
+作者通过加入一个相似性损失，来量化原始样本的嵌入特征和每个转换后的正常样本的嵌入特征之间的差异，这代表了与原始数据不同的风格。具体来说，在瓶颈层和解码器的最后一个块上都计算这种损失：
+
+![image-20231017190734900](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017190734900.png)
+
+![image-20231017190746014](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017190746014.png)
+
+**Test Time Augmentation for Anomaly Detection under Distribution Shift**
+
+为了解决测试期间数据分布之间不匹配的问题，作者提出在推理阶段使用教师编码器的多层特征分布匹配（FDM），将训练分布注入到推理样本中。所提出的测试框架如图3 (b) 所示，测试时增强被应用于教师编码器的前两个残差块。从第三个残差块开始的推理过程，以及异常评分的计算，遵循原始的RD4AD框架，没有任何修改。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017190929929.png" alt="image-20231017190929929" style="zoom:80%;" /><img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231017190943632.png" alt="image-20231017190943632" style="zoom:80%;" />
+
+> 总结：
+
+* 在测试阶段，使用训练样本的随机挑选的 normal 样本来调整测试时的样本（公式4，5），以解决测试期间数据分布之间不匹配的问题
+
+### 20_Unified Out-Of-Distribution Detection: A Model-Specific Perspective_ICCV 2023_无代码
+
+> 作者：Reza Averly Wei-Lun Chao
+
+> 贡献：
+
+背景: 在可靠的机器学习中，使模型具备识别 “自己不知道的东西” 的能力至关重要。然而，现有的模型在面对具有协变量偏移（例如不同图像领域或风格）或语义偏移（例如新的类别）的数据时，往往准确率大幅下降。
+
+过去的离群检测方法主要关注语义偏移导致的离群样本，忽视了其他可能的原因，如协变量偏移。这限制了这些方法在非受控环境中应用的适用性。
+
+鉴于现有方法的局限性，本文试图扩展离群检测的范围，进一步包括协变量偏移。通过从“模型特定” 的角度定义离群样本，提出了一种统一的框架 ==MS-OOD Detection==，能够更好地研究不同原因导致的离群样本，并更好地适应实际应用场景。
+
+> 方法：
+
+MS-OOD Detection 将测试样本分为两种情况：模型特定接受（**MS-A**）和模型特定拒绝（**MS-R**）。MS-A 包含由部署的分类器正确分类的ID和协变量偏移样本；MS-R 包含被错误分类的 ID 和协变量偏移样本以及语义偏移样本。MS-OOD Detection 的目标是区分 MS-A 和 MS-R 样本。
+
+![image-20231025130153385](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231025130153385.png)
+
+本文研究了影响 MS-OOD Detection 性能的三个维度：**离群样本的来源**、**部署的分类器**和**离群检测方法**。
+
+ID/OOD 样本的来源包括 ImageNet-1K （用于ID数据），SVHN、 Texture (DTD) 、Places365等用于S-OOD数据，具有不同程度和类型的协变量偏移的数据集用于 C-OOD 数据；
+
+不同的神经网络模型：包括ResNet50、ResNet18、ResNet152、鲁棒ResNet50、CLIP-ResNet50和ViT-B-16；
+
+使用的后处理的检测方法，包括基于输出、基于特征和混合方法。
+
+结论：
+
+1. CLIP-ResNet50 模型相对于基准的 ResNet50 模型对于 C-OOD 样本更具鲁棒性。然而，对 C-OOD 样本进行分类的准确性仍然不完美，表明接受所有 C-OOD 样本存在风险。另一方面，拒绝所有 C-OOD 样本将导致浪费，除了在 ImageNet-A 数据集上的 ResNet50 模型。结果表明需要接受正确分类的 C-OOD 样本，同时拒绝错误分类的样本。
+
+![image-20231025130707589](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231025130707589.png)
+
+2. 对于 ID 样本，分类 ID 数据的准确性越高，错误接受错误分类的 ID 样本的假阳性率越低。然而，使用更强的模型会导致更高的假阳性率。MSP 方法在区分正确分类和错误分类的ID样本方面表现优于其他检测方法。
+
+   ![image-20231025130934472](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231025130934472.png)
+
+3. 对于 C-OOD 样本，分类 C-OOD 数据的准确性越高，识别正确分类的 C-OOD 样本的 F1-Score 越高。MSP 在区分 C-OOD+ 和 C-OOD- 数据方面表现最好。
+
+   ![image-20231025131059478](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231025131059478.png)
+
+4. 对于 S-OOD 样本，分类 ID 数据的准确性越高，错误接受 S-OOD 样本的假阳性率越低。然而，使用更强的模型会导致更高的假阳性率的例外情况。在不同的检测方法中没有明确的优胜者。
+
+   ![image-20231025131120587](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231025131120587.png)
+
+> 总结：
+
+协变量偏移：不同图像领域或风格 ----> 域变化 ----> 域增量
+
+语义偏移：新的类别 ----> 类变化 ----> 类变化
+
+## 20231110
+
+### 21_Enhancing Your Trained DETRs with Box Refinement_arxiv 2307_有代码
+
+> 作者：Yiqun Chen1,2 Qiang Chen3 Peize Sun4 Shoufa Chen4 Jingdong Wang3 Jian Cheng1
+
+> 代码：https://github.com/YiqunChen1999/RefineBox
+
+> 贡献：
+
+本文的动机是改进DETR模型的定位能力。作者观察到，改进定位能力可以带来显著的性能提升，而改进分类能力的提升效果较低。因此，作者提出了一种新的框架 **RefineBox**，通过细化网络对训练好的 DETR 模型的预测框进行改进，从而提高定位质量。
+
+作者观察到一种现象，即多级级联的 decoder 存在后期降低真阳性，升级假阳性的情况。因此作者提出以下两种猜想：
+
+1. 在训练过程中，所有阶段都以同等的方式进行监督，缺乏将重点放在训练后期阶段的机制；
+2. 简单的级联结构会造成错误的积累，顺序结构无法让后期训练阶段从前序阶段获得更有意义的信息（目前是，后续阶段进对前一个阶段的信息全盘接收）。
+
+RefineBox 通过向训练良好的模型添加轻量级的细化网络，而不是从头设计和训练新模型。该方法易于实现和训练，因为它仅使用来自训练良好的检测模型的特征和预测框。在训练过程中，训练好的检测器被冻结，使得该方法高效。
+
+RefineBox 可以轻松应用于各种训练好的检测模型。实验结果表明，RefineBox 在 COCO 和 LVIS 1.0 数据集上的效果显著，DETR、Conditional-DETR、DAB-DETR和DN-DETR 的性能分别提高了 2.4 AP、2.5 AP、1.9 AP 和 1.6 AP。
+
+> 方法：
+
+作者分别将定位和分类的预测设置为 gt ，以观察这两个子任务在理想情况下的性能：
+
+![image-20230804162650178](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20230804162650178.png)
+
+如上图可见，消除定位误差会使模型得到很大的改进，而消除分类错误会带来的收益小很多。因此得出定位是当前 DETR 类模型的瓶颈：**定位误差限制了提高分类能力的可能**。即使是具有理想分类性能的模型，也只能带来有限的收益。
+
+因此作者提出一个轻量级的网络来优化 DETR 类模型的定位和分类能力：
+
+**RefineBox**（如下图）包含了两个组成部分： 一个对象检测器和一个用于细化预测的边界框的细化网络。
+
+![image-20230804163021097](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20230804163021097.png)
+
+细化网络主要执行两个步骤：
+
+首先，细化网络从训练后的检测模型的主干中提取特征金字塔；
+
+其次，它通过一系列细化器模块有效地利用多尺度特征来细化模型预测的边框。
+
+在训练过程中，冻结了训练好的目标检测器的参数，只更新 FPN 和 Refiner 模块的权重。
+
+每个 Refiner 模块包括一个ROI对齐层、一个残差模块和一个多层感知器。残差模块由几个瓶颈块组成。
+
+![image-20230804155810410](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20230804155810410.png)
+
+RefineBox 框架专注于细化预测的边界框，不修改分类结果。训练 RefineBox 框架使用**回归损失**，具体包括 GIoU 损失和 L1 损失。在推理过程中，选择具有最高分类分数的前K个预测进行细化。RefineBox 框架引入了约 0.5M 个参数，并产生了显著的改进。
+
+> 总结：
+
+* 通过消除定位差异和分类差异来看模型性能的提升情况发现，提高定位的性能具有很大潜力（还有很大上升空间）-> 定位能力是当前 DETR 类检测模型的瓶颈；
+* 定位框细化的思想可以考虑借鉴，比如在训练过程中加一个细化分支；
+
+### 22_Anomaly Heterogeneity Learning for Open-set Supervised Anomaly Detection_arxiv 2310_有代码链接
+
+> 作者：Jiawen Zhu, Choubo Ding, Yu Tian, Guansong Pang
+
+> 代码：https://github.com/mala-lab/AHL
+
+> 贡献：
+
+背景: 异常检测是识别与大多数数据显著不同的数据点的任务，具有广泛的应用领域。由于异常数据的收集困难，大多数现有的异常检测方法将其视为一分类问题，只使用正常样本进行训练。然而，在许多应用中，通常存在一些可访问的异常样本，如以往工业检查中发现的缺陷样本和以前患者的肿瘤图像。这些异常样本提供了关于异常的重要先验知识，但现有的方法没有利用它们。目前已经提出了一些用于开放式监督异常检测的方法，通过利用有限的训练异常数据来学习用于检测未知异常的广义模型。然而，这些方法通常认为异常样本来自**同质分布**，限制了它们在检测未知异常样本的性能。
+
+![image-20231108211606136](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231108211606136.png)
+
+鉴于现有方法对异常样本的同质性假设存在的缺陷，本文提出了一种学习**异质异常分布**的方法 ALH，以更好地适应未知异常，并提高开放式监督异常检测的性能。通过模拟多样化的异常分布并学习统一的异质异常模型，AHL 方法能够在检测已知异常和未知异常方面取得更好的性能。
+
+> 方法：
+
+AHL 框架由两个主要组成部分组成：**HADG**（Heterogeneous Anomaly Distribution Generation ）和 **CDL**（Collaborative Differentiable Learning of the anomaly heterogeneity ）
+
+HADG 通过将正常样本划分为簇，并将每个簇与随机抽样的异常样本关联起来，学习不同的异常分布，从而创建 T 组训练异常分布数据集，每个数据集包含正常样本和异常样本的混合；
+
+CDL 旨在通过在生成的数据集上训练 T 个基础模型，并协同优化它们，学习异构异常分布。基础模型捕捉不同的异常分布，统一模型则以在各种可能的异常分布上表现良好为目标进行优化。通过动态估计每个基础模型的重要性，增强协同优化过程。
+
+![image-20231108210832061](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231108210832061.png)
+
+> 总结：
+
+* 结合元学习以及集成学习的思想；
+* 通过共同学习多个检测带有某种偏向的 base model（比如：与正常样本簇A混合在一起的异常样本，可能相对来说，相较于 B 类正常样本，和A类正常样本在一起时更容易被检测出来），从而使得 final model 对多种可能的异常样本具有检测能力；
+
+## 20231117
+
+### 23_Intra-Modal Proxy Learning for Zero-Shot Visual Categorization with CLIP_ NeurIPS'23_有代码
+
+> 作者：Qi Qian, Yuanhong Xu, Juhua Hu
+
+> 代码：https://github.com/idstcv/InMaP
+
+> 贡献：
+
+背景: 视觉-语言预训练方法（如CLIP）在使用文本嵌入的类别代理进行零样本视觉分类方面取得了令人印象深刻的性能。然而，文本和视觉空间之间的**模态差异**可能导致性能下降。
+
+ 过去的方法主要集中在改进零样本学习本身，其中一些方法利用大型预训练语言模型（如GPT-3）来获得更好的文本代理，而另一些方法则利用目标领域的无标签数据进行微调。然而，这些方法并未解决文本和视觉空间之间的模态差异问题。
+
+ 鉴于 CLIP 模型和零样本传输中不使用任何辅助网络，本研究旨在理解 CLIP 的行为，并提出一种名为 InMaP 的方法，通过学习**视觉代理**来改善 CLIP 在零样本视觉分类中的性能，减少文本和视觉空间之间的模态差异，从而改善零样本视觉分类的性能。该方法能够在单GPU上一分钟内从图像数据中获取视觉代理，并将零样本准确率从 77.02% 提高到 80.21%。
+
+> 方法：
+
+InMaP 通过学习视觉代理而不是直接使用文本代理来解决 CLIP 中文本和视觉空间之间的模态差距。
+
+为了提高在视觉空间中的零样本性能，作者考虑直接获得视觉代理，而不是使用文本代理。主要的挑战来自于标签是不可用的。幸运的是，可以通过模拟其他模态的代理来学习模态内代理。**通过最小化文本代理和可学习视觉代理估计的分布之间的 KL 散度**，可以有效地获得最优视觉代理。
+
+![image-20231114141934198](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231114141934198.png)
+
+文中的定理2表明，恢复的视觉代理与最优视觉代理之间的距离受文本代理预测的伪标签与地面真标签分布之间的差距的限制。在大规模数据集上对 CLIP 模型进行预训练后，可以近似于真实数据的分布，从而可以学习模态内代理。通过估计的文本代理预测的伪标签和真实标签分布之间的差距来限制恢复的视觉代理与最优视觉代理之间的距离。
+
+伪标签细化：
+
+![image-20231114142447842](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231114142447842.png)
+
+InMaP算法的详细步骤可以参考算法1。
+
+![image-20231114141526267](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231114141526267.png)
+
+> 总结：
+
+利用文本信息提供伪标签来训练图像空间的分类器
+
+### 24_LEVERAGING CROSS-MODAL NEIGHBOR REPRESENTATION FOR IMPROVED CLIP CLASSIFICATION_Under review at ICLR 2024_无代码
+
+> 作者：
+
+> 贡献：
+
+背景：一些现有研究直接使用CLIP的图像编码器进行少样本分类等任务，但这种方法忽视了CLIP的多模态能力，导致与其预训练目标的不一致。此外，由于CLIP没有针对单模态场景进行优化，其在单模态任务中的性能也无法保证。
+
+本研究的动机是要利用 CLIP 强大的多模态能力来**提取更好的图像特征**，旨在改进CLIP在单模态特征提取方面的性能，从而提高 CLIP 在下游任务中的性能。为了实现这一目作者**将文本特征视为 CLIP 空间中图像特征的精确邻居**，并提出了一种基于图像与其邻居文本之间距离结构的 CrOss-moDal nEighbor Representation (==CODER==)方法。通过构建高质量的文本样本与图像的邻居关系，CODER 能够更好地与 CLIP 的预训练目标相一致，充分发挥 CLIP 的跨模态能力。
+
+> 方法：
+
+本文引入 CrOss-moDal nEighbor Representation (CODER) 来构建基于 CLIP 特征空间内图像与文本之间距离关系的图像表示。
+
+CODER 纠正了图像之间错误的距离关系，并改善了特征表示的对齐性。如下图：
+
+![image-20231114162820984](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231114162820984.png)
+
+文章还讨论了构建良好的 CODER 的密集采样邻居样本的重要性，并提出了**降维**和**增加文本数量**作为优化技术。为了构建 CODER，引入了自动提示生成器（APG）模块，用于生成构建 CODER 所需的高质量提示。APG 根据类别名称、属性、类比类别、同义词和1v1比较生成提示。
+
+![image-20231114162911313](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231114162911313.png)
+
+> 总结：
+
+本文没有像以往的方式去增加文本prompt的多样性（例如CoOp系列，让文本 embedding 部分可学习），而是通过添加文本的多样性，利用 GPT 生成多种相关文本提示来增强 CLIP 的分类能力。
+
+## 20231124
+
+### 25_Hyperbolic Vision Transformers: Combining Improvements in Metric Learning_CVPR 2022_有代码
+
+> 作者：Aleksandr Ermolov, Leyla Mirvakhabova, Valentin Khrulkov, Nicu Sebe, Ivan Oseledets
+
+> 代码：https://github.com/htdt/hyp_metric
+
+> 贡献：
+
+背景: 度量学习旨在学习一个高度区分性的模型，鼓励相似类别的嵌入在选择的度量中靠近，而不相似类别的嵌入则被推开。
+
+过去方案通常使用编码器提取嵌入和基于距离的损失函数来匹配表示，通常使用欧几里得距离。
+
+本文提出了一种新的基于超几何的度量学习模型。该模型的核心是一个**将输出嵌入映射到超几何空间**的视觉Transformer。这些嵌入直接使用改进的成对交叉熵损失进行优化。通过在四个数据集上进行实验评估，本文提出的模型在六种不同的配方中取得了最新的性能表现。
+
+> 方法：
+
+本文提出了一种新的度量学习损失函数，将双曲空间的表达能力与交叉熵损失函数的简单性相结合，将嵌入投影到庞加莱球并使用双曲距离。**该损失函数在双曲空间中作用**，鼓励相似对象的嵌入更加接近，同时将不相似对象的嵌入推开。
+
+![image-20231120110344692](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120110344692.png)
+
+**Hyperbolic Embeddings**
+
+n 维双曲空间 $H^n$是一个常负曲率的黎曼流形。双曲空间存在几种等距模型，在本文的工作中，使用的是庞加莱球模型$(D^n _c，g^D)$，曲率参数： c（实际曲率值为c^2）。
+
+![image-20231120110652327](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120110652327.png)
+
+局部距离是由球边界附近接近无穷大的因子 $λ_c$缩放的。这就产生了双曲空间的“空间膨胀”性质。在欧几里得空间，一个直径为 r 的物体的体积在空间中呈多项式尺度。在双曲空间中，体积随 r 呈指数尺度变化。
+
+双曲空间不是向量空间，为了能够执行加法等操作，需要引入陀螺向量形式主义。对于一对$x，y∈D^n_c$，加法被定义为：
+
+![image-20231120110903723](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120110903723.png)
+
+相应的，双曲距离：
+
+![image-20231120110932997](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120110932997.png)
+
+当 c 趋于 0 时，双曲距离相当于欧式距离。
+
+需要定义一个从欧几里得空间与庞加莱模型的双映射。从欧几里得空间到庞加莱模型的映射被称为指数，而从双曲空间到欧几里得的逆映射则称为对数映射。
+
+对于固定的基点 $x∈D^n_c$，指数映射是一个函数定义为：
+
+![image-20231120111214623](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120111214623.png)
+
+映射到双曲空间的特征表示为 $z_i$
+
+基点 x 通常设为 0 以简化公式，经验表明这对得到的结果影响很小。
+
+**Pairwise Cross-Entropy Loss**
+
+![image-20231120111423842](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120111423842.png)
+
+***δ*-hyperbolicity**
+
+使用  Gromov *δ* 方法评估数据双曲性的“度量”：
+
+![image-20231120111849325](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120111849325.png)
+
+> 总结：
+
+* 双曲空间能有效地嵌入分层数据，即使是在低维空间中
+
+### 26_Enhancing Few-shot CLIP with Semantic-Aware Fine-Tuning_arxiv 2311_无代码
+
+> 作者：Yao Zhu, Yuefeng Chen, Wei Wang, Xiaofeng Mao, Xiu Yan, Yue Wang, Zhigang Li, Wang lu, Jindong Wang, Xiangyang Ji
+
+> 贡献：
+
+背景: 在资源有限的情况下，从有限的训练样本中学习泛化表示对于应用深度神经网络至关重要。以CLIP为基础的方法在 Few-shot 任务中表现出色，但现有方法通常冻结在大规模数据集上预训练的 CLIP 参数，忽视了某些参数可能不适用于下游任务的可能性。
+
+本研究从语义注意力的角度探讨了 CLIP 的可微调性，并提出方法 **SAFE**（Semantic-Aware FinE-tuning），通过对 CLIP 的注意力池化层进行微调来引导模型关注任务特定的语义信息，以增强 Few-shot CLIP 的适应性和可解释性。
+
+SAFE 旨在增强 CLIP 模型的少样本适应性能。该方法主要关注 CLIP 的视觉编码器中的注意力汇聚层，该层对密集特征图进行空间加权求和。作者认为，在不同的少样本任务中，使用相同的加权求和操作可能不合适，因为不同的语义对不同的下游任务具有不同的重要性。为了解决这个问题，提出在训练过程中对注意力汇聚层的参数进行微调，**以鼓励模型关注任务特定的语义**。在推理过程中，通过在经过微调的注意力汇聚层和原始注意力汇聚层之间进行残差混合，将少样本知识和预训练CLIP的先验知识结合起来。
+
+> 方法：
+
+作为人类，我们能够通过匹配给定图像的语义特征与我们已知的类别之间的对应关系来识别给定的新图像。例如，我们使用眼睛、耳朵和鼻子等语义特征来确定一个物体是否是猫。问题是，对比语言-图像预训练（CLIP）能否学习图像之间的语义对应关系，并利用这些信息来提高 Few-shot 的性能？Zeiler和Fergus [47]，Mehrer等人的[48]表明，早期的神经网络层（更接近输入）专注于局部特征，如边、角和线。因此，作者研究了 CLIP 模型的**深度特征**（而不是早期特征）是否表现出广义的语义，可以用来建立不同图像之间的对应关系。
+
+![image-20231120150836749](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120150836749.png)
+
+SAFE 主要包括**训练阶段使用少样本微调 clip 的注意力池化层**（对应 resetnet 的backbone，如果是 transformer 的backbone，则微调最后一个transformer 层）以及推理阶段对微调后的注意池层和原始的注意池层之间进行残差混合，以纳入来自训练前的先验知识和 few-shot 微调学到的知识。
+
+![image-20231120151204403](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120151204403.png)
+
+**算法流程：**
+
+![image-20231120151421294](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231120151421294.png)
+
+> 总结：
+
+为了根据密集特征中不同部分的权重对下游任务的意义，对其进行修正，作者提出使用 few-shot 训练样本对 CLIP 的注意池层进行微调。在 few-shot 训练样本的指导下，注意池层更关注密集特征中的特定任务语义，而不是像现有方法那样在不同任务中采用相同的注意机制。
+
+## 20231201
+
+### 27_Guiding Pseudo labels with Uncertainty Estimation for Source-free Unsupervised Domain Adaptation_CVPR 2023_有代码
+
+> 作者：Mattia Litrico, Alessio Del Bue, Pietro Morerio
+
+> 代码：https://github.com/MattiaLitrico/Guiding-Pseudo-labels-with-Uncertainty-Estimation-for-Source-free-Unsupervised-Domain-Adaptation
+
+> 贡献：
+
+传统的无监督域自适应方法需要在自适应过程中访问源域数据，而无源无监督域自适应方法则无法使用这些方法，因此需要新的解决方案。
+
+ 本研究的动机在于解决无源无监督域自适应中伪标签的噪声问题，提出了一种**基于不确定性估计的伪标签引导策略**，用于无源无监督域自适应。以增强对伪标签噪声的鲁棒性。通过估计伪标签的不确定性来重新加权分类损失。通过从相邻样本中聚合知识来逐步改进伪标签。此外，还利用自监督对比框架作为目标空间正则化器来增强知识聚合。引入了一种负样本排除策略，用于识别和排除由具有相同类别的样本组成的负样本对，即使伪标签中存在噪声也能实现。通过对伪标签的可靠性进行评估，减轻了伪标签中的噪声影响，并在三个主要基准数据集上取得了显著的性能提升。
+
+> 方法：
+
+自适应过程从使用训练好的源模型为未标记的目标数据生成伪标签开始。然后通过从最近邻样本中聚合知识来改进伪标签。使用软投票策略对所选邻居的概率输出进行平均，得到改进的伪标签。改进过程基于相似样本应具有相同标签的假设。为了估计改进的伪标签的不确定性，引入了一种基于熵的不确定性估计方法。计算平均分数向量的熵，并根据熵值为每个样本分配权重。在训练过程中使用权重对分类损失进行重新加权。此外，使用一个时间队列来在对比训练过程中排除负样本对。
+
+![image-20231127210217974](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127210217974.png)
+
+不确定性的评估方式：
+
+![image-20231127210252778](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127210252778.png)
+
+排除由具有相同类别的样本组成的负样本对：
+
+![image-20231127210509149](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127210509149.png)
+
+### 28_Proposal-Level Unsupervised Domain Adaptation for Open World Unbiased Detector__有代码
+
+> 作者：Xuanyi Liu, Zhongqi Yue, Xian-Sheng Hua
+
+> 代码：https://github.com/lxycopper/PLU
+
+> 贡献：
+
+过去的开放世界目标检测方法通常采用基于top-k选择策略的伪标签生成方法，但这种方法存在**刚性**和**偏见**的问题，无法灵活处理不同情况，并且预测器对已知类别有偏见。
+
+本文提出了一种面向开放世界无偏检测器的 proposal 级无监督领域自适应方法Proposal-Level Unsupervised Domain Adaptation（==PLU==），通过重新定义任务并采用自训练方法，构建了一个无偏的前景预测器，实现了对外观变化的鲁棒预测，并在开放世界目标检测任务中，在基于Faster-RCNN框架和DDETR框架的实验中展示了其最先进的性能。
+
+如下图：检测器倾向于给与已知类（苹果）有相似外观的未知物体更高的分数。
+
+![image-20231127172559355](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127172559355.png)
+
+> 方法：
+
+（PLU）旨在通过重新制定无监督域自适应（UDA）任务来构建一个**无偏的前景/背景（FG/BG）预测器**。该方法涉及对已知和未知类别进行标记，使用UDA的自训练方法，并将UDA模块扩展到各种目标检测框架中。
+
+**Domain 的划分**
+
+源域：与 gt 匹配的 proposals + 背景置信度很高的 proposals
+
+目标域：除源域之外的 proposals
+
+![image-20231127172811780](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127172811780.png)
+
+**PLU Module**：
+
+![image-20231127173546028](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127173546028.png)
+
+训练：
+
+![image-20231127173608268](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127173608268.png)
+
+![image-20231127173615346](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127173615346.png)
+
+![image-20231127173621910](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127173621910.png)
+
+算法流程：
+
+![image-20231127173451625](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231127173451625.png)
+
+> 总结：
+
+感觉本质上还是依据已知类别的特征来选择未知类伪标签，但是本文的方法域之前 topk 的方法相比，最大的区别在于扩大了可参考的样本量（原来 topk 方法的可参考样本量是当下一张图（或者说此前见过的图）的已知类，本文的可参考样本量是整个任务的已知类），所以训练出来的 FG/BG 预测器的准确率会更好一些。
+
+## 20231208
+
+### 29_Rejuvenating image-GPT as Strong Visual Representation Learners_xx 2023_有代码
+
+> 作者：Sucheng Ren, Zeyu Wang, Hongru Zhu, Junfei Xiao, Alan Yuille, Cihang Xie
+
+> 代码：https://github.com/OliverRensu/D-iGPT
+
+> 贡献：
+
+背景: 大语言模型（LLMs）在自然语言处理（NLP）领域取得了巨大成功，但自回归预训练在计算机视觉领域的进展尚未达到同样的高度。
+
+本研究的动机在于挖掘自回归预训练在构建强大视觉学习模型方面的潜力，通过对 Image-GPT 进行关键改进，提出了 D-iGPT，证明了其在视觉表示学习中具有出色的能力。
+
+> 方法：
+
+![image-20231208112227915](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231208112227915.png)
+
+对于 iGPT 的两个关键改进：
+
+首先，将预测目标从原始像素转移到**语义标记**，从而实现对视觉内容的更高级理解。
+
+与文本固有的语义丰富的本质相比，图像中的原始像素通常缺乏这样的意义深度。在iGPT等模型中，解决这种语义差异对于提高学习效率至关重要。为了弥补这一差距，本文的方法受到BEiT的启发，将D-iGPT的自回归目标从原始像素转换为语义标记，可以写成：
+
+![image-20231208112350970](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231208112350970.png)
+
+f 时对应图片区域的语义编码器。
+
+其次，模型不仅训练预测下一个标记，还训练预测可见标记，以补充自回归建模。
+
+为了进一步加强模型的训练，引入了针对可见集群的额外监督。这种方法的定义如下：
+
+![image-20231208112540118](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231208112540118.png)
+
+这两种修改的整合显著提高了 iGPT 对视觉表征学习的能力。虽然模型 fϕ(x) 有各种选项来生成语义标记，但作者发现，像CLIP这样的区别训练模型就比较好用。
+
+### 30_Segment Every Out-of-Distribution Object_xx 2023_无代码
+
+> 作者：Wenjie Zhao, Jia Li, Xin Dong, Yu Xiang, Yunhui Guo
+
+> 贡献：
+
+现有的语义分割中的 OoD 检测方法通过为每个像素分配一个异常分数来解决这一问题。异常得分高的像素将被视为 OoD 对象的一部分。异常分数通常是由分割模型对每个像素进行的概率预测得出的。虽然基于异常评分的OoD检测方法能够准确地识别异常像素，但它们缺乏分割整个 OoD 对象的有效方法。特别是，为了推导出 OoD 对象的掩模，使用一个精心选择的阈值来区分异常像素和正常像素是至关重要的。然而，在实际应用中确定最优阈值可能是一项困难的任务。
+
+本文介绍了一种将异常分数转换为分割掩码的方法 S2M，这是一种简单而有效的语义分割中的 OoD 检测框架。与给像素分配异常分数不同，S2M 直接分割整个 OoD 对象。通过将异常分数转换为可提示分割模型的提示，S2M 消除了阈值选择的需要。
+
+> 方法：
+
+![image-20231208135130732](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231208135130732.png)
+
+利用简单有效的框架处理语义分割中的面向对象检测问题，解决了现有的基于异常评分的OoD检测方法要提供像素级的异常评分的固有局限性。虽然这些异常分数可以表明给定像素是否可能属于一个 OoD 对象，但准确获取整个 OoD 对象的分割掩码是困难的。相比之下，本文提出的 S2M 利用异常得分图来创建方框提示，作为 OoD 对象存在的信号。该方框提示作为可提示分割框架的输入，该框架处理这些提示和原始图像，以为 OoD 对象生成掩码。
+
+![image-20231208135627184](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231208135627184.png)
+
+在推理过程中，使用现有的 OoD 检测方法对输入图像进行处理，以计算出异常得分图。然后将此映射输入提示生成器，从而生成指示潜在 OoD 对象位置的边界框提示。随后，我们采用了一个可提示的分割模型，它将提示和原始图像作为输入，并产生 OoD 对象的掩模。如图5所示。由于异常分数高的区域可以被分割，因此提示生成器可能会产生多个方框提示。在这种情况下，将它们全部输入到可提示的分割模型中，并使用所有生成的掩码的联合区域作为最终结果。
+
+## 20231215
+
+### 31_Open World Object Detection in the Era of Foundation Models_202312 _有代码
+
+> 作者：Orr Zohar, Alejandro Lozano, Shelly Goel, Serena Yeung, Kuan-Chieh Wang
+
+> 代码：[FOMO | Orr Zohar](https://orrzohar.github.io/projects/fomo/)
+
+> 贡献：
+
+作者认为由于现有OWD任务严格的基准和任务定义，限制了基础模型的使用，OWD方法的发展受到了阻碍。
+作者提出现有OWD的数据的一个缺陷，为所谓的“未知物体”是大多数现代检测方法可以很好地检测的日常物体，这让学出来的模型是否真的能够泛化到现实中的未知类存疑。
+通过在OWD基准上进行评估，作者发现即使是简单的基础模型也几乎使基准达到饱和状态。因此本文放宽OWD定义，并探究在OWD中利用预训练的基础模型的可行性。新的基准，将来自不同真实应用领域的多个数据集进行了整合，包括水下、空中和医学领域。
+作者发现在大多数实际应用中，未知对象与基础类别共享视觉/功能属性。与之前的OWD方法不同，本文将属性属于分布内但在已知类中属于外分布的确定为未知对象。并提出基于 FOMO （Foundation Object Detection Model for the Open world,简称FOMO）的基础目标检测模型的开放世界方法。具体来说，FOMO 学习检测对象的属性以及这些属性与已知对象之间的映射关系，使用少量的对象示例进行训练。为此，FOMO 利用少量的对象示例来选择和完善由大型语言模型首先提出的属性嵌入。
+
+> 方法：
+
+**新基准**
+
+![image-20231214195616542](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195616542.png)
+RWD基准包含五个现有的应用驱动的目标检测数据集。这些数据集中的类别被分成两个子集：最常见的50％类别和最不常见的50％类别。方法在两个阶段进行评估：任务1（T1）和任务2（T2）。在T1中，只考虑了最常见的50％类别，而最不常见的50％类别对模型来说仍然未知。在T2中，剩下的50％最不常见的类别将被揭示，模型将根据其在先前/当前已知类别集上的性能进行评估。
+**FOMO**
+
+FOMO 尝试通过识别与基础类别具有视觉、功能属性共享的对象来检测未知对象。![image-20231214195655537](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195655537.png)
+
+**Attribute Generation**
+如图 2（i）所示，我们利用大型语言模型为视觉属性生成（文本）候选项。接下来，使用算法1生成一个包含N个与类别无关的属性列表，表示为A。并编码产生属性嵌入矩阵![image-20231214195717153](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195717153.png)。通过![image-20231214195732666](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195732666.png)计算视觉嵌入和属性嵌入之间的得分。
+
+![image-20231214195818472](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195818472.png)
+
+**Attribute Selection and Refinement**
+并非所有生成的属性都与手头的问题相关，本文使用已知类别的训练图像来选择相关属性。选择每个对象类的前$\hat{N}$个属性，并删除未用于分类任何对象类的所有属性。
+**Unknown Class Inference**
+“未知”：在属性方面是分布内，但在已知类别方面是分布外
+
+![image-20231214195921442](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195921442.png)
+
+![image-20231214195930710](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195930710.png)
+
+最终的未知物体预测分数：![image-20231214195941897](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195941897.png)
+**实验结果**
+在传统owd设定下：
+
+![image-20231214195957665](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214195957665.png)
+
+在RWD设定下：
+
+![image-20231214200032705](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214200032705.png)
+
+> 总结：
+
+* 将基础 VLMs 整合到开放世界目标检测任务中
+* 将未知类定义为与已知类具有某些相似属性的未见过的类别
+
+### 32_ProxyDet: Synthesizing Proxy Novel Classes via Classwise Mixup for Open Vocabulary Object Detection_AAAI 2023_有代码
+
+> 作者：Joonhyun Jeong, Geondo Park, Jayeon Yoo, Hyungsik Jung, Heesu Kim
+
+> 代码：https://github.com/clovaai/ProxyDet
+
+> 贡献：
+
+背景：作者认为现有的OVD伪标签方法尽管简单，但对真正的新类性能仍然有待改进。
+
+在本文中，作者提出了一种新颖的，但简单的技术，帮助泛化新颖类的总体分布。作者观察到，许多新类位于CLIP嵌入空间中由基类构造的凸包中，受此启发，提出通过**一对基类之间的线性混合**来合成近似新类的代理新类。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215221850024.png" alt="image-20231215221850024" style="zoom:80%;" /><img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215221903475.png" alt="image-20231215221903475" style="zoom:80%;" />
+
+> 方法：
+
+**ProxyDet: Learning Proxy Novel Classes via Class-wise Mixup**
+
+![image-20231215222238850](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215222238850.png)
+
+**Synthesizing Proxy-Novel Classes**
+
+给定⼀个批次中基类别的视觉和文本原型 rB 和 T(cB)，随机选择⼀对包含基类别 cBi 和cBj 的类别特定特征的原型 【rBi 和 T(cBi)】 和原型 【rBj 和 T(cBj)】。新类代理由下式得到：
+
+![image-20231215222700541](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215222700541.png)
+
+V(•) 表⽰L2归一化，λ遵循Beta(γ, γ)分布
+
+**Constructing Prototype**
+
+文本原型：通过将类别名 cBi 作为文本编码器的输入来获得
+
+视觉原型：⼀种简单的解决⽅案是计算所有同类别对应的区域嵌入的质心<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215223407381.png" alt="image-20231215223407381" style="zoom:67%;" />
+
+然而，简单地平均所有区域嵌入来构建一个质心原型嵌入可能是次优的，因为positive proposal有可能包括低质量的定位结果，如图4所示。因此提出将加权函数F(r)与考虑到提议质量的度量函数ϕ(•)相结合，ϕ(•)由RPN中的物体置信度或与最近的真实框的IoU决定。
+
+所以：**Robust Visual Prototype**中的F(r)：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215223446443.png" alt="image-20231215223446443" style="zoom:67%;" />
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215223135924.png" alt="image-20231215223135924" style="zoom:67%;" />
+
+**Proxy Loss**
+
+Proxy Loss的目标是将代理新颖类别的区域嵌入与代理新颖类别的文本嵌入之间的距离最小化，从而有效让模型探索新颖类别的嵌入空间。<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215223853826.png" alt="image-20231215223853826" style="zoom:80%;" />
+
+**Inference**
+
+代理损失旨在提高新类的分类性能，其目标不同于传统的BCE损失，后者优先考虑基类的性能。为了防止这两个损失之间的潜在竞争，作者将每个损失分别应用于具有相同架构的两个独立的探测器头上。在推理阶段，我们通过计算与所有类的文本嵌入的点积相似度，来计算各自头部的区域嵌入的分类分数。然后用几何平均值合并这两个分类分数，如下：
+
+![image-20231215223657038](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231215223657038.png)
+
+> 总结：
+
+闪光点：原型的计算方式，考虑不同嵌入的质量
+
 # 实验
 
 * idea：结合文本和随机
@@ -789,7 +1592,7 @@ c0.8：仅根据相似性阈值（ > 0.8）选择 unknown 框
 |                                                              |            | Task 1 |        |       |       | Task 2 |        |       |       |       |       | Task 3 |        |       |       |       |       | Task 4 |       |       |
 | ------------------------------------------------------------ | ---------- | ------ | ------ | ----- | ----- | ------ | ------ | ----- | ----- | ----- | ----- | ------ | ------ | ----- | ----- | ----- | ----- | ------ | ----- | ----- |
 |                                                              |            | WI     | AOSE   | C-m   | UR    | WI     | AOSE   | m-AP  |       |       | UR    | WI     | AOSE   | m-AP  |       |       | UR    | m-AP   |       |       |
-|                                                              |            | P-m    | C-m    | B     | P-m   | C-m    | B      | P-m   | C-m   | B     |       |        |        | P-m   | C-m   | B     |       | P-m    | C-m   | B     |
+|                                                              |            |        |        |       |       |        |        | P-m   | C-m   | B     |       |        |        | P-m   | C-m   | B     |       | P-m    | C-m   | B     |
 | Faster-RCNN + Finetuning                                     |            | 0.0699 | 13,396 | 56.40 |       | 0.0371 | 12,291 | 51.00 | 25.00 | 38.00 |       | 0.0213 | 9,174  | 38.20 | 13.60 | 30.00 |       | 29.70  | 13.00 | 25.60 |
 | DDETR + Finetuning                                           |            | 0.0608 | 33,270 | 60.30 |       | 0.0368 | 18,115 | 54.50 | 34.40 | 44.80 |       | 0.0197 | 9,392  | 40.00 | 17.80 | 33.30 |       | 32.50  | 20.00 | 29.40 |
 | 【objectness】根据未匹配的 proposal 最有可能是前景对象的可能性得分 |            |        |        |       |       |        |        |       |       |       |       |        |        |       |       |       |       |        |       |       |
@@ -886,10 +1689,268 @@ unknown选择对比可视化：
 
 分析：可能是使用原型的方法，无差别的拉大不同类类原型之间的距离并不合理。（eg：猫原型的距离和狗原型的距离 d1 应当比猫和足球的距离d2 要小，即合理的情况下应该 d1 < d2）
 
-### **下一步计划：**
+**下一步计划：**
 
 首先考虑一下去掉原型约束，而是直接将模型最后一个训练 epoch 的时候提取的特征保存下来，以平均值作为类中心。
 
-然后，先试试上面的指导未知类选择的方法，看看是否有效；
+然后，先试试上面的指导未知类选择的方法，看看是否有效；（效果不好，unrecall 17.24）
 
 另外，还可以在训练 t2 的时候，对于那些与前序任务类中心相近的（以相似性或 l2 距离衡量）样例，减小其所对应损失计算的权重（类似于权重正则化的机制）。
+
+### 高斯模糊
+
+做法，对特征图 F0 使用高斯核进行模糊化得到 FT，然后使用 F残差（F0-FT） 表示对象有用信息，将 F 残差拼接到 F0 后面然后通过 1*1 卷积进行维度还原。（如下图中间部分）
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231020131344285.png" alt="image-20231020131344285" style="zoom:50%;" />
+
+t1 结果如下表（高斯核大小 = 5， sigma 如下）：
+
+| sigma | WI     | AOSE | C-m   | UR    |
+| ----- | ------ | ---- | ----- | ----- |
+| 0.1   | 0.0683 | 6228 | 56.94 | 22.89 |
+| 0.5   | 0.0707 | 6684 | 56.78 | 23.79 |
+| 0.8   | 0.0679 | 6045 | 57.46 | 23.41 |
+
+分析：没有像文章中说的那样，特征残差貌似没起到让前景对象突出的作用。等原文代码出来看看它代码咋写的。
+
+### 高斯模糊+残差结构
+
+| sigma | WI     | AOSE | C-m   | UR    |
+| ----- | ------ | ---- | ----- | ----- |
+| 0.01  | 0.0691 | 5754 | 58.39 | 23.09 |
+| 0.05  | 0.0693 | 5562 | 58.97 | 22.89 |
+| 0.08  | 0.0705 | 5971 | 57.33 | 23.58 |
+| 0.1   | 0.0672 | 5666 | 58.70 | 22.69 |
+| 0.5   | 0.0676 | 5873 | 58.13 | 23.20 |
+| 0.8   | 0.0671 | 5758 | 58.74 | 23.31 |
+
+### 文本投射到双曲空间
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231101201515141.png" alt="image-20231101201515141" style="zoom: 50%;" />
+
+由于 clip 特征空间的文本特征中，不同类别之间的区别不大；所以考虑将其投射到双曲空间从而拉大不同类别之间文本特征的距离。
+
+假设投射到双曲空间之后的特征为 $f_{text_h}$，直接拉近相应类别特征 $f$ 和 $f_{text_h}$ 之间的距离，因此模型学习出来的特征也是会呈现出不同类别特征区别更为明显的情况，从而更有利于模型对于不同类别的区分。
+
+|                                    | Task 1 |       |       |       | Task 2 |       |       |       |       |       | Task 3 |       |       |       |       |       | Task 4 |       |       |
+| ---------------------------------- | ------ | ----- | ----- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ------ | ----- | ----- |
+|                                    | WI     | AOSE  | C-m   | UR    | WI     | AOSE  | P-m   | C-m   | B     | UR    | WI     | AOSE  | P-m   | C-m   | B     | UR    | P-m    | C-m   | B     |
+| c0.5 + rand5 + c0.8                | 0.0627 | 5,030 | 60.17 | 23.13 | 0.0239 | 2,502 | 52.19 | 34.06 | 43.13 | 19.62 | 0.0151 | 1,917 | 41.11 | 23.62 | 35.28 | 21.83 | 35.17  | 20.05 | 31.39 |
+| c0.5 + rand5 + c0.8 + smallmin0.01 | 0.0610 | 4,854 | 60.10 | 23.31 | 0.0239 | 2,448 | 51.80 | 34.48 | 43.14 | 19.03 | 0.0152 | 1,971 | 40.75 | 23.17 | 34.89 | 22.06 | 34.99  | 19.46 | 31.11 |
+| c0.5 + rand5 + c0.8                | 0.0625 | 4954  | 60.11 | 22.67 |        |       |       |       |       |       |        |       |       |       |       |       |        |       |       |
+| c0.5 + rand5 + c0.85               | 0.0645 | 5250  | 60.20 | 23.07 | 0.0241 | 2684  | 52.51 | 34.87 | 43.69 | 18.97 | 0.0157 | 2072  | 41.05 | 23.85 | 35.32 | 22.47 | 35.11  | 19.47 | 31.20 |
+
+整体看下来，将 clip 文本特征投射到双曲空间对已知类 AP 的性能是有一点作用的。
+
+## coco-o 域泛化
+
+### cartoon（实例数：8774）
+
+|                             | Task 1 |       |       |      |       | Task 2 |       |       |       |       |      |       | Task 3 |      |       |      |       |      |       | Task 4 |       |       |
+| --------------------------- | ------ | ----- | ----- | ---- | ----- | ------ | ----- | ----- | ----- | ----- | ---- | ----- | ------ | ---- | ----- | ---- | ----- | ---- | ----- | ------ | ----- | ----- |
+|                             | WI     | AOSE  | C-m   | U-AP | UR    | WI     | AOSE  | P-m   | C-m   | B     | U-AP | UR    | WI     | AOSE | P-m   | C-m  | B     | U-AP | UR    | P-m    | C-m   | B     |
+| ORE − EBUI                  | 0.1443 | 3328  | 18.07 | 4.65 | 15.95 | 0.0766 | 4178  | 19.56 | 14.76 | 17.16 | 3.61 | 16.11 | 0.0443 | 2917 | 13.66 | 4.73 | 10.68 | 1.06 | 10.44 | 10.42  | 11.75 | 10.76 |
+| OW-DETR                     | 0.2229 | 15270 | 2.34  | 0.84 | 29.75 | 0.1040 | 10509 | 3.33  | 0.72  | 2.03  | 2.53 | 33.32 | 0.0544 | 5799 | 1.42  | 3.72 | 2.18  | 0.25 | 24.01 | 0.17   | 0.80  | 0.33  |
+| ours（c0.5 + rand5 + c0.8） | 0.1995 | 1502  | 13.63 | 2.99 | 49.02 | 0.0983 | 1236  | 13.75 | 20.71 | 17.23 | 1.80 | 52.45 | 0.0556 | 613  | 13.37 | 9.00 | 11.91 | 1.34 | 52.06 | 12.36  | 15.23 | 13.08 |
+
+
+
+### handmake（实例数：3266）
+
+|                             | Task 1 |      |       |      |       | Task 2 |      |       |       |       |      |       | Task 3 |      |       |       |       |      |       | Task 4 |       |       |
+| --------------------------- | ------ | ---- | ----- | ---- | ----- | ------ | ---- | ----- | ----- | ----- | ---- | ----- | ------ | ---- | ----- | ----- | ----- | ---- | ----- | ------ | ----- | ----- |
+|                             | WI     | AOSE | C-m   | U-AP | UR    | WI     | AOSE | P-m   | C-m   | B     | U-AP | UR    | WI     | AOSE | P-m   | C-m   | B     | U-AP | UR    | P-m    | C-m   | B     |
+| ORE − EBUI                  | 0.1610 | 1973 | 22.19 | 7.38 | 27.38 | 0.0775 | 2238 | 20.33 | 17.81 | 19.07 | 3.71 | 22.58 | 0.0365 | 1431 | 16.55 | 9.63  | 14.24 | 1.35 | 20.75 | 13.26  | 10.79 | 12.64 |
+| OW-DETR                     | 0.1911 | 6732 | 4.24  | 1.35 | 38.72 | 0.1167 | 6124 | 3.55  | 0.70  | 2.13  | 1.96 | 43.46 | 0.0530 | 3139 | 1.80  | 3.75  | 2.45  | 1.21 | 24.96 | 0      | 1.33  | 0.33  |
+| ours（c0.5 + rand5 + c0.8） | 0.2158 | 945  | 21.16 | 5.57 | 68.56 | 0.1013 | 629  | 15.65 | 21.09 | 18.37 | 2.62 | 63.59 | 0.0416 | 342  | 16.39 | 13.94 | 15.57 | 1.50 | 68.33 | 15.76  | 21.70 | 17.24 |
+
+
+
+### painting（实例数：4879）
+
+|                             | Task 1 |      |       |      |       | Task 2 |      |       |       |       |      |       | Task 3 |      |       |       |       |      |       | Task 4 |       |       |
+| --------------------------- | ------ | ---- | ----- | ---- | ----- | ------ | ---- | ----- | ----- | ----- | ---- | ----- | ------ | ---- | ----- | ----- | ----- | ---- | ----- | ------ | ----- | ----- |
+|                             | WI     | AOSE | C-m   | U-AP | UR    | WI     | AOSE | P-m   | C-m   | B     | U-AP | UR    | WI     | AOSE | P-m   | C-m   | B     | U-AP | UR    | P-m    | C-m   | B     |
+| ORE − EBUI                  | 0.0956 | 1485 | 30.09 | 2.61 | 17.01 | 0.0436 | 1467 | 26.39 | 18.03 | 22.21 | 1.69 | 12.61 | 0.0235 | 1184 | 19.19 | 18.70 | 19.02 | 0.74 | 14.02 | 18.89  | 16.27 | 18.24 |
+| OW-DETR                     | 0.1352 | 5202 | 6.32  | 1.12 | 30.78 | 0.0542 | 3447 | 5.22  | 0.92  | 3.07  | 0.98 | 33.90 | 0.0284 | 1985 | 1.84  | 8.31  | 4.00  | 0.29 | 28.45 | 0      | 2.34  | 0.58  |
+| ours（c0.5 + rand5 + c0.8） | 0.1218 | 656  | 28.72 | 2.65 | 51.58 | 0.0400 | 326  | 20.01 | 22.08 | 21.04 | 0.88 | 48.49 | 0.0207 | 218  | 19.01 | 27.93 | 21.99 | 0.91 | 57.92 | 22.93  | 22.52 | 22.83 |
+
+### sketch（实例数：3707）
+
+|                             | Task 1 |      |       |      |       | Task 2 |      |       |       |       |            |       | Task 3 |      |       |          |          |      |       | Task 4    |      |          |
+| --------------------------- | ------ | ---- | ----- | ---- | ----- | ------ | ---- | ----- | ----- | ----- | ---------- | ----- | ------ | ---- | ----- | -------- | -------- | ---- | ----- | --------- | ---- | -------- |
+|                             | WI     | AOSE | C-m   | U-AP | UR    | WI     | AOSE | P-m   | C-m   | B     | U-AP       | UR    | WI     | AOSE | P-m   | C-m      | B        | U-AP | UR    | P-m       | C-m  | B        |
+| ORE − EBUI                  | 0.1203 | 893  | 13.14 | 1.12 | 9.66  | 0.0603 | 865  | 12.30 | 10.95 | 11.62 | 0.90       | 11.92 | 0.0282 | 558  | 10.75 | nan/3.38 | nan/8.29 | 0.36 | 8.11  | nan/8.79  | 6.27 | nan/8.16 |
+| OW-DETR                     | 0.1488 | 4078 | 3.95  | 1.68 | 27.10 | 0.0829 | 3314 | 2.30  | 0.51  | 1.40  | 9.76(离谱) | 30.27 | 0.0345 | 1646 | 1.25  | 2.28     | 1.59     | 0.14 | 17.95 | 0         | 0.63 | 0.15     |
+| ours（c0.5 + rand5 + c0.8） | 0.1419 | 446  | 11.50 | 2.32 | 47.81 | 0.0528 | 251  | 9.15  | 12.65 | 10.90 | 0.73       | 42.89 | 0.0348 | 144  | 9.36  | nan/3.18 | nan/7.30 | 0.59 | 45.72 | nan/10.32 | 6.72 | nan/9.42 |
+
+
+
+### tattoo（实例数：1489）
+
+|                             | Task 1 |      |           |      |       | Task 2 |      |           |           |           |      |       | Task 3 |      |          |       |          |      |       | Task 4   |           |           |
+| --------------------------- | ------ | ---- | --------- | ---- | ----- | ------ | ---- | --------- | --------- | --------- | ---- | ----- | ------ | ---- | -------- | ----- | -------- | ---- | ----- | -------- | --------- | --------- |
+|                             | WI     | AOSE | C-m       | U-AP | UR    | WI     | AOSE | P-m       | C-m       | B         | U-AP | UR    | WI     | AOSE | P-m      | C-m   | B        | U-AP | UR    | P-m      | C-m       | B         |
+| ORE − EBUI                  | 0.0830 | 502  | nan/14.17 | 1.78 | 10.07 | 0.0310 | 381  | nan/11.63 | nan/10.33 | nan/10.98 | 0.51 | 7.26  | 0.0185 | 302  | nan/9.71 | 7.46  | nan/8.96 | 0.30 | 8.77  | nan/9.64 | nan/7.34  | nan/9.07  |
+| OW-DETR                     | 0.0165 | 931  | 1.78      | 3.09 | 19.82 | 0.0170 | 1039 | 2.30      | 0.03      | 1.16      | 0.39 | 24.10 | 0.0140 | 887  | 0.89     | 2.15  | 1.31     | 0.50 | 35.31 | 0.05     | 0.38      | 0.13      |
+| ours（c0.5 + rand5 + c0.8） | 0.0726 | 185  | nan/8.46  | 1.93 | 56.44 | 0.0381 | 128  | nan/8.40  | nan/13.52 | nan/10.96 | 0.71 | 47.86 | 0.0168 | 69   | nan/8.04 | 10.47 | nan/8.85 | 0.58 | 63.50 | nan/9.67 | nan/14.20 | nan/10.80 |
+
+### weather（实例数：4509）
+
+|                             | Task 1 |      |           |      |       | Task 2 |      |           |           |           |        |      | Task 3   |      |           |          |           |        |       | Task 4    |          |           |
+| --------------------------- | ------ | ---- | --------- | ---- | ----- | ------ | ---- | --------- | --------- | --------- | ------ | ---- | -------- | ---- | --------- | -------- | --------- | ------ | ----- | --------- | -------- | --------- |
+|                             | WI     | AOSE | C-m       | U-AP | UR    | WI     | AOSE | P-m       | C-m       | B         | U-AP   | UR   | WI       | AOSE | P-m       | C-m      | B         | U-AP   | UR    | P-m       | C-m      | B         |
+| ORE − EBUI                  | 0.0645 | 927  | nan/26.97 | 0.75 | 11.96 | 0.0004 | 19   | nan/24.90 | nan/17.44 | nan/21.17 | 0      | 0    | 7.13e-05 | 5    | nan/19.71 | nan/0.89 | nan/13.44 | 0      | 0     | nan/13.50 | nan/0.65 | nan/10.29 |
+| OW-DETR                     | 0.0324 | 1326 | 9.44      | 3.19 | 26.97 | 0.0002 | 20   | 8.09      | 0.39      | 4.24      | 0.0018 | 7.5  | 0        | 0    | 3.09      | 1.03     | 2.40      | 0.01   | 12.5  | 0.07      | 0.91     | 0.28      |
+| ours（c0.5 + rand5 + c0.8） | 0.0752 | 386  | nan/29.96 | 1.14 | 44.84 | 0.0004 | 4    | nan/22.96 | nan/21.94 | nan/22.45 | 0.01   | 17.5 | 0        | 1    | nan/18.75 | nan/2.71 | nan/13.40 | 0.0075 | 31.25 | nan/13.18 | nan/2.79 | nan/10.59 |
+
+### 注：
+
+nan？ 修改方式，当 recall 和 ap 为 nan 时 置 0 ↓
+
+  ```python
+  # detectron2/evaluation/pascal_voc_evaluation.py
+  def voc_eval():
+      rec = [0 if math.isnan(i) else i for i in rec] # wxf 20231107 解决 domain-test 出现结果 nan 的问题 
+      ap = 0 if math.isnan(ap) else ap # wxf 20231107 解决 domain-test 出现结果 nan 的问题
+      return rec, prec, ap, is_unk_sum, n_unk, tp_plus_fp_closed_set, fp_open_set
+  ```
+
+OW-DETR t4 的测试结果，由于作者未上传 t4_ft 的模型训练权重，暂时使用的是 t4 的权重。（已发邮件请作者上传 t4_ft 权重）
+
+## 方法尝试
+
+动机：由于 CLIP 特征空间中，常见类别名称对应的文本特征之间的相似性很高，所以用于目标检测中时指导性较弱；
+
+因此尝试将 CLIP 的文本特征投射到对应的图像特征空间中，并且增强不同类别的可辨认程度（通过可学习的网络变换 Net 之后，减小不同类名文本特征之间的相似度）
+
+```
+# Net:
+import torch.nn as nn
+
+class MLP_adapter(nn.Module):
+    # Non-Linear Transformation in the paper, acting as the translator between modalities.
+    def __init__(self, in_dim:int, hidden_dim:int, out_dim:int):
+        super().__init__()
+        self.linear1 = nn.Linear(in_dim, hidden_dim)
+        self.linear2 = nn.Linear(hidden_dim, out_dim)
+        self.relu = nn.ReLU(inplace=True)
+    
+    def forward(self, x):
+        x = self.linear1(x)
+        x = self.relu(x)
+        # x = x + self.relu(x) # res
+        x = self.linear2(x)
+        return x
+```
+
+
+
+对于未知类别检测的指导方式：将 Caption 中的 novel 名词所对应的 CLIP 空间文本特征，经 Net 变换之后得到的特征，作为标注伪未知类标签的指导特征。
+
+实验结果（pro-）：
+
+|                             | t1     | t1    | t1    | t1    |
+| --------------------------- | ------ | ----- | ----- | ----- |
+|                             | WI     | AOSE  | C-m   | UR    |
+| randun                      | 0.0582 | 4,375 | 60.10 | 23.09 |
+| pro-sim0.5-rand5            | 0.0540 | 4410  | 60.02 | 21.62 |
+| pro-sim0.5-rand5-res        | 0.0563 | 4429  | 59.98 | 21.88 |
+| pro-sim0.5-rand5-sim0.8     | 0.0655 | 8680  | 60.76 | 18.16 |
+| pro-sim0.5-rand5-sim0.8-res | 0.0666 | 8593  | 60.69 | 17.96 |
+
+分析：
+
+观察变换后的20个类原型的相似度，确实变得很小了，起到了区分作用；
+
+从实验结果来看，模型对未知类的检测能力下降厉害。可能是因为，只能对已知类别的文本特征做约束，这导致学到的映射关系可能会偏向于已知类文本特征到图像特征的映射，而未知类的映射关系较弱，造成文本信息伪标签指导性不佳。
+
+
+
+|                       |      | Task 1 |       |       |       | Task 2 |       |       |       |       |       | Task 3 |       |       |       |       |       | Task 4 |       |       |
+| --------------------- | ---- | ------ | ----- | ----- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ------ | ----- | ----- | ----- | ----- | ----- | ------ | ----- | ----- |
+|                       |      | WI     | AOSE  | C-m   | UR    | WI     | AOSE  | m-AP  |       |       | UR    | WI     | AOSE  | m-AP  |       |       | UR    | m-AP   |       |       |
+|                       |      |        |       |       |       |        |       | P-m   | C-m   | B     |       |        |       | P-m   | C-m   | B     |       | P-m    | C-m   | B     |
+| RandUn-owod           | ours | 0.0582 | 4,375 | 60.10 | 23.1  | 0.0242 | 2,329 | 51.66 | 34.06 | 42.86 | 18.5  | 0.0156 | 1,886 | 40.55 | 23.13 | 34.75 | 21.8  | 34.61  | 19.40 | 30.80 |
+| RandUn_cap_s0.5r5s0.8 |      | 0.0587 | 4572  | 60.04 | 23.24 | 0.0240 | 2387  | 52.15 | 34.58 | 43.36 | 19.04 | 0.0154 | 1900  | 41.31 | 24.33 | 35.65 | 22.43 | 35.28  | 19.61 | 31.36 |
+| RandUn_cap_pro_s0.6r5 |      | 0.0577 | 4901  | 60.36 | 21.49 | 0.0219 | 2612  | 53.42 | 33.53 | 43.47 | 17.80 | 0.0147 | 1945  | 41.43 | 22.66 | 35.17 | 20.23 | 35.66  | 19.58 | 31.64 |
+
+RandUn_cap_s0.5r5s0.8：文本不做投射变换。
+
+RandUn_cap_pro_s0.6r5  :文本做投射變換，相似性閾值為0.6，然後隨機選擇5個偽未知候選框。結果分析：已知類指標變好，未知類召回率變差。另外，在增量任务中，虽然整体上mAP是变好的，但是呈现出 pre-mAP 增大， cur-mAP 减小的趋势。
+
+总体来看，对文本做投射变换后的结果还不如做投射变换前的。可能是因为 CLIP 的训练物料非常丰富，所学习到的类别特征表示已经将类别间的关系考虑在内，所以即使相似性高也没关系。？
+
+|||||
+
+|                            | t1     | t1   | t1    | t1    |
+| -------------------------- | ------ | ---- | ----- | ----- |
+|                            | WI     | AOSE | C-m   | UR    |
+| RandUn_cap_pro_sim_only0.5 | 0.0412 | 1608 | 54.39 | 23.61 |
+| RandUn_cap_pro_sim_only0.6 | 0.0515 | 2384 | 56.00 | 22.89 |
+| RandUn_cap_pro_sim_only0.7 | 0.0581 | 3047 | 56.71 | 22.57 |
+
+分析：对文本做投射之后的结果，甚至还不如不做映射之前（mAP高了0.几， UR降了将近2个点）。（link 方法尝试->文本和随机方法结合对比）
+
+|||||
+
+## 消融_RandUn_cap_s0.5r5s0.8
+
+|                                 | Task 1 |        |       |       | Task 2 |        |       |       |       |       | Task 3 |        |       |       |       |       | Task 4 |       |       |
+| ------------------------------- | ------ | ------ | ----- | ----- | ------ | ------ | ----- | ----- | ----- | ----- | ------ | ------ | ----- | ----- | ----- | ----- | ------ | ----- | ----- |
+|                                 | WI     | AOSE   | C-m   | UR    | WI     | AOSE   | m-AP  |       |       | UR    | WI     | AOSE   | m-AP  |       |       | UR    | m-AP   |       |       |
+|                                 |        |        |       |       |        |        | P-m   | C-m   | B     |       |        |        | P-m   | C-m   | B     |       | P-m    | C-m   | B     |
+| Featurized Query R-CNN（无nms） | 0.0718 | 79,516 | 57.06 | 0.00  | 0.0390 | 40,259 | 47.30 | 30.73 | 39.01 | 0.00  | 0.0197 | 20,307 | 37.53 | 22.08 | 32.38 | 0.00  | 31.05  | 16.74 | 27.48 |
+| Featurized Query R-CNN（有nms） | 0.0625 | 34,978 | 58.32 | 0.00  | 0.0322 | 21,548 | 48.79 | 31.22 | 40.00 | 0.00  | 0.0178 | 11,779 | 38.61 | 22.62 | 33.28 | 0.00  | 32.21  | 17.21 | 28.46 |
+| baseline-obj1（无nms）          | 0.0761 | 77,927 | 56.42 | 9.99  | 0.0428 | 39,682 | 45.94 | 30.03 | 37.99 | 6.94  | 0.0214 | 19,824 | 35.21 | 20.64 | 30.35 | 8.51  | 29.41  | 16.13 | 26.09 |
+| baseline-obj1（有nms）          | 0.0654 | 33,240 | 57.70 | 9.69  | 0.0343 | 20,066 | 47.47 | 30.65 | 39.06 | 6.75  | 0.0189 | 11,525 | 36.47 | 21.16 | 31.37 | 8.31  | 30.61  | 16.52 | 27.09 |
+| baseline-obj5（无nms）          | 0.0755 | 72,358 | 55.87 | 13.70 | 0.0437 | 38,361 | 43.72 | 29.29 | 36.51 | 10.28 | 0.0210 | 18,088 | 32.93 | 18.86 | 28.24 | 11.73 | 28.09  | 15.51 | 24.94 |
+| s5r5s8+hungari                  | 0.0756 | 15,169 | 56.33 | 22.79 | 0.0354 | 9,560  | 44.22 | 27.85 | 36.04 | 21.82 | 0.0179 | 5,975  | 29.71 | 16.59 | 25.34 | 22.65 | 29.78  | 16.03 | 26.34 |
+| OTA                             | 0.0620 | 4,965  | 60.01 | 23.08 | 0.0242 | 2,454  | 52.01 | 34.17 | 43.09 | 19.26 | 0.0158 | 2,002  | 41.01 | 23.42 | 35.14 | 22.06 | 34.78  | 19.74 | 31.02 |
+| ROI-Attn                        | 0.0629 | 5,098  | 60.19 | 23.23 | 0.0260 | 2,707  | 51.98 | 34.24 | 43.11 | 18.71 | 0.0152 | 1,938  | 41.37 | 23.35 | 35.36 | 22.14 | 35.16  | 19.40 | 31.22 |
+
+说明：
+
+* baseline-obj1，FQ + obj1，根据 ORE 的选择方式，从未匹配的预测框中选择一个 objectness 最高预测框作为未知类伪标签；
+* Un-Select，未知类伪标签随机选择方式消融；随机选择未匹配的 5 各候选框作为 unknown；
+* s5r5s8+hungari,baseline的选未知类伪框的方式换成文本+随机的组合；
+* OTA，在上一行的基础上，将 HungarianMatcher 换成 OtaMatcher，ota 的 OTA_TOP_CANDIDATES = 5；
+* ROI-Attn，在 OTA 的基础上，加上 ROI-Attn 模块，相当于做特征增强。
+
+t1消融结果
+
+|                           | WI     | AOSE   | C-m   | UR    |
+| ------------------------- | ------ | ------ | ----- | ----- |
+| baseline                  | 0.0718 | 79,516 | 57.06 | 0.00  |
+| baseline+obj1             | 0.0761 | 77,927 | 56.42 | 9.99  |
+| baseline+obj5             | 0.0755 | 72,358 | 55.87 | 13.70 |
+| baseline+SRS              | 0.0756 | 15,169 | 56.33 | 22.79 |
+| baseline+SRS+OTA          | 0.0637 | 5,143  | 59.96 | 22.84 |
+| baseline+SRS+OTA+ROI-Attn | 0.0625 | 5,025  | 60.33 | 23.05 |
+
+SRS对应伪未知类候选框选择方法
+
+OTA表示将匈牙利匹配方式换成OTA多标签分配
+
+ROI-Attn表示对ROI-feature做去噪增强，增强对象特征
+
+（后面两行都是三次结果的平均值）
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231214224008931.png" alt="image-20231214224008931" style="zoom:60%;" />
+
+## ROI-Attn vs BiLstm vs GCN
+
+|        | WI   | AOSE | mAP  | UR   |
+| ------ | ---- | ---- | ---- | ---- |
+| BiLstm |      |      |      |      |
+| GCN    |      |      |      |      |
+
+BiLstm ：双向 Lstm，对所有 ROI 进行双向lstm编码，每个 ROI 特征增强结果取前向结果和后向结果的平均值，也是用也残差结构。
+
+​	即： aug_roi = ori_roi + aug_roi
+
+​			aug_roi = lstm_forward(roi) + lstm_backward(roi)
+
+（**Learning Object Context for Dense Captioning ** 使用了单向LSTM来学习对象的上下文信息）
+
+GCN： 参考 **Vision GNN: An Image is Worth Graph of Nodes**，将每个 roi 特征作为一个节点，根据 roi 之间的距离选择 topk 个 roi 作为邻居，进行一次聚合传播。
