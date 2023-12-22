@@ -1602,7 +1602,7 @@ Multi-modal MLR：
 借用CLIP图像编码器，以多标签分配为检测前景对象提供先验信息
 
 ### 34_Weakly Supervised Open-Vocabulary Object Detection_AAAI 2024_有代码
-> 作者：
+> 作者：Jianghang Lin, Yunhang Shen, Bingquan Wang, Shaohui Lin, Ke Li, Liujuan Cao
 
 > 代码：https://github.com/HunterJ-Lin/WSOVOD
 
@@ -2019,10 +2019,12 @@ ROI-Attn表示对ROI-feature做去噪增强，增强对象特征
 
 ## ROI-Attn vs BiLstm vs GCN
 
-|        | WI   | AOSE | mAP  | UR   |
-| ------ | ---- | ---- | ---- | ---- |
-| BiLstm |      |      |      |      |
-| GCN    |      |      |      |      |
+|                           | WI     | AOSE  | mAP   | UR    |
+| ------------------------- | ------ | ----- | ----- | ----- |
+| baseline+SRS+OTA          | 0.0637 | 5,143 | 59.96 | 22.84 |
+| baseline+SRS+OTA+ROI-Attn | 0.0625 | 5,025 | 60.33 | 23.05 |
+| BiLstm                    | 0.0638 | 5136  | 60.3  | 22.69 |
+| GCN                       | 0.0638 | 5052  | 59.94 | 23.52 |
 
 BiLstm ：双向 Lstm，对所有 ROI 进行双向lstm编码，每个 ROI 特征增强结果取前向结果和后向结果的平均值，也是用也残差结构。
 
@@ -2033,3 +2035,5 @@ BiLstm ：双向 Lstm，对所有 ROI 进行双向lstm编码，每个 ROI 特征
 （**Learning Object Context for Dense Captioning ** 使用了单向LSTM来学习对象的上下文信息）
 
 GCN： 参考 **Vision GNN: An Image is Worth Graph of Nodes**，将每个 roi 特征作为一个节点，根据 roi 之间的距离选择 topk 个 roi 作为邻居，进行一次聚合传播。
+
+相对来说，使用roi特征增强都有点效果。
