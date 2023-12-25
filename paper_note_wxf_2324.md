@@ -1640,6 +1640,86 @@ proposal。SAM所包含的知识不仅有助于丰富高质量的目标proposal�
 
 本文和上篇文章都用到了 MIL 来扩充先验知识，是一个可以借鉴的方向。
 
+## 20231229
+
+### 35_SCLIP: Rethinking Self-Attention for Dense Vision-Language Inference_xx 2312_有代码
+
+> 作者：Feng Wang, Jieru Mei, Alan Yuille
+
+> 代码：https://github.com/wangf3014/SCLIP
+
+> 贡献：
+
+由于在密集预测任务中，CLIP经常难以定位图像中的视觉特征，无法给出准确的像素级预测，这使其无法作为广义视觉基础模型。
+
+首先，作者确定了普通CLIP在语义分割中失败的原因是CLIP学习了“空间不变”的视觉特征，这意味着局部特征倾向于对其在图像中的空间位置不变，并且该模型侧重于整体的视觉表示。这导致普通的CLIP能够准确地推理出图片中有水和火烈鸟，但是不能正确的对应位置（如下图左下所示）。然而，在语义分割等密集的预测任务中，我们实际上需要”空间相关“特征，这意味着局部表示应该随着它们在图像中的空间位置而发生变化。
+
+![image-20231225115132435](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225115132435.png)
+
+在本文中，作者的目标是提高CLIP在语义分割方面的潜力。通过简单地引入一种新的相关自我注意Correlative Self-Attention （CSA）机制来适应密集的预测任务。具体来说，用**CSA**模块替换传统的CLIP视觉编码器**最后一层的自注意块**，并重用了其预先训练好的q、k、v的投影矩阵，提出**SCLIP** (**S**egmentation-adapted **CLIP** model)，从而实现了对CLIP的零镜头语义分割的**无训练自适应方法**。
+
+> 方法：
+
+SCLIP方法的核心概念是通过架构修改，将从CLIP范式中学习到的空间不变的视觉特征转换为协变表示，以便CLIP模型可以推广到密集的预测任务。如图3给出了原本注意力和CSA模块的对比。CSA中：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225115736754.png" alt="image-20231225115736754" style="zoom:80%;" />
+
+![image-20231225115300505](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225115300505.png)
+
+Attn的每个元素$a_{ij}∈[0,1]$度量xi到xj的注意得分，因此高对角线值表明每个局部token主要关注自己的位置，因此每个位置的视觉信息都很好地局部化。这就解释了为什么之前的MaskCLIP可以工作，它强制令$a_{ij} \neq 0，i = j$和$a_{ij} = 1，i = j$。在CSA模块中，当i = j时，$x_iW_r$和$x_jW_r$之间的相关性总是达到最大值。
+
+除了其显著的特征定位能力外，CSA模块还考虑了局部token之间的语义相关性，从而产生鲁棒和平滑的密集预测结果。直观地说，对于每个局部token$x_i$，CSA不仅给$x_i$本身提供很高的注意力分数，也给共享相似语义内容的令牌很高的注意力分数。在图4中可视化了这种效果，对于每个源点，只有语义相似度高的位置被分配有明显的注意，因此在注意源图中可以清楚地识别每个源点对应的对象（如椅子和猫）。
+
+![image-20231225120355546](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225120355546.png)
+
+**Segmentation-Adapted CLIP Model**
+
+与MaskCLIP保持一致，将CLIP的图像编码器的最后一个Transformer块视为解码层，以实现自适应，同时保持其余组件不变。
+
+![image-20231225120416372](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225120416372.png)
+
+$W_q$和$W_k$是CLIP预训练好的参数。
+
+ **Ablation Study**-**Projection matrices in correlative self-attention**
+
+结论：不同的方式结果相差不大，CSA具有较强的鲁棒性。
+
+*Identity Projection*：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225120744125.png" alt="image-20231225120744125" style="zoom: 67%;" />（与MaskCLIP不一样）
+
+*Ensemble of Random Initializations*：随机初始化几个投影矩阵求平均。<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225120908035.png" alt="image-20231225120908035" style="zoom: 67%;" />
+
+*Projection with Single* **W**q *or* **W**k：单独使用，作为结合二者的消融
+
+*Learned Projection*：为了充分利用CSA的潜力，专门从每个数据集的训练分割中学习一个投影矩阵。由于可学习的参数很少，该模型能够在很少的情况下很好地收敛于训练样本（对每个数据集使用64个）。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225120710242.png" alt="image-20231225120710242" style="zoom:80%;" />
+
+> 总结：
+
+* 通过约束q和v的投射矩阵，使token特征具有空间相关性。（mark）
+
+### 36_A Simple Knowledge Distillation Framework for Open-world Object Detection_xx 2312_无代码
+
+（**同Detecting the open-world objects with the help of the “Brain”**）
+
+> 作者：**Shuailei Ma**† **, Yuefeng Wang**† **, Ying Wei**† ♣**, Jiaqi Fan**† **,**Xinyu Sun**‡ **, Peihao Chen**‡ **, Enming Zhang**†
+
+> 贡献：
+
+大型预先训练的视觉语言基础模型（VLM，如GLIP）对开放世界有丰富的知识，但受到文本提示的限制，无法定位难以描述的对象。然而，在推理过程中，存在许多没有预定义语言描述的检测场景。
+
+在本文中，作者试图通过将OWOD任务的开放世界知识提炼为一个与语言无关的检测器，来专门化针对OWOD任务的VLM模型。作者观察到，将OWOD中简单的知识蒸馏方法与自动伪标记机制相结合，即使使用少量数据的未知对象检测，也能获得更好的性能。但是对未知物体的知识蒸馏严重影响了对已知物体的传统结构检测的学习，导致灾难性的遗忘。为了缓解这个问题，提出了从视觉语言到单一视觉形态的知识提炼的down-weight loss 函数。同时将定位和识别的学习解耦，以减少已知和未知对象的类别交互的影响。
+
+> 方法：
+
+图1显示了总体框架。对于一个给定的图像𝑥，它首先被同时发送到开放世界的检测器和大型的预训练的视觉语言grounding模型中。该检测器利用输入的视觉特征来预测定位、方框得分和分类。大型的预先训练的视觉语言基础模型从输入中挖掘未知的开放世界知识。已知的gt和未知的提炼知识聚集了开放世界的监督。在训练阶段，根据回归损失、分类和**监督置信度**来匹配预测和开放世界监督。匹配后，根据预测的方框得分选择伪标签，**伪标签可以防止模型完全属于大型预先训练的视觉语言基础模型的知识**，**并帮助它了解提炼知识之外的看不见物体**。然后，利用所有的标签，通过down-weight训练损失函数来训练开放世界检测器。此外，当在每一次引入新的类别时，基于范例回放的微调来减轻学习类的灾难性遗忘，并通过使用存储于所有已知类的平衡样本集进行微调。
+
+
+
+![image-20231225125441001](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20231225125441001.png)
+
+> 总结：
+
+* 使用大模型的zero-shot检测首先获取一部分未知类，并用zero-shot结果的置信度为监督训练一个预测器进一步选择k个未知类伪标签。
+
 # 实验
 
 * idea：结合文本和随机
