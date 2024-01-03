@@ -1720,6 +1720,104 @@ $W_q$和$W_k$是CLIP预训练好的参数。
 
 * 使用大模型的zero-shot检测首先获取一部分未知类，并用zero-shot结果的置信度为监督训练一个预测器进一步选择k个未知类伪标签。
 
+## 20240105
+
+### 37_Knowledge distillation for object detection based on Inconsistency-based Feature Imitation and Global Relation Imitation_Neurocomputing 2023_无代码
+
+> 作者：Peng Ju a, Yi Zhang b,∗，四川大学
+
+> 代码：无
+
+> 贡献：
+
+背景：目前，在目标检测中应用最广泛的蒸馏方法是特征模仿，即将教师的特征知识转移给学生。然而这些特性充满了冗余，其中一些可能并不有利于检测。因此，转移所有的特性可能会产生不好的结果，改进蒸馏结果的**关键步骤是在特征图上找到有用的区域**。之前的工作Defeat将proposal region作为前景区域，并迁移这部分知识。然而，经典的目标检测方法通常有两个独立的分支（即分类分支和回归分支）。他们的结果通常是不一致的。例如，某个锚点的分类得分可能较高，但其回归边界盒与地面真相之间的IoU可能较低。因此，只要分类或定位不准确，最终的检测精度就较低。
+
+为了解决上述问题，本文提出了一种新的特征模仿方法，即蒸馏具有高度不一致的区域（网络将关注检测器的分类和定位能力高度不一致的领域）。此外，考虑到关系信息（RI）对目标检测也至关重要，提出了一个新的模块来分别提取学生和教师的RI，并让学生学习教师的关系知识。
+
+即本文提出了一种==基于不一致性的特征模拟（IBFI）==和==全局关系模拟（GRI）==的目标检测知识蒸馏方案。IBFI计算分类头和回归头的输出之差，以平衡检测器的分类和定位能力。GRI使学生模型能够模仿老师模型的关系信息。
+
+结合本文的方法，RetinaNet + ResNet-50和Faster R-CNN+ResaNet-50检测器分别达到39.9%和40.6%，分别超过基线2.5%和2.2%。
+
+> 方法：
+
+本文方法的核心组成部包括：基于不一致性的特征模拟（IBFI）、关系信息提取模块（RIEM）和全局关系模拟（GRI）。老师和学生的neck结构的输出被用作IBFI的输入。然后，IBFI迫使学生专注于分类和定位结果不一致这些区域，并模仿老师的特征。RIEM从教师和学生中提取关系信息（RI），而GRI将教师的RI蒸馏给学生。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103133511607.png" alt="image-20240103133511607" style="zoom:80%;" />
+
+ ***Inconsistency-based feature imitation (IBFI)***
+
+IBFI作为网络的核心组成部分，根据教师的分类和回归结果生成发散图，然后引导学生模仿教师的特征。为了测量分类分数$s_{cls}$和回归分数$s_{reg}$的不一致性，计算散度值：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103134409277.png" alt="image-20240103134409277" style="zoom:67%;" />。在蒸馏过程中，对于某一领域，从教师转移到学生的知识量应与其𝑑𝑖𝑣𝑒𝑟的值成正比。损失表示为：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103134601599.png" alt="image-20240103134601599" style="zoom:80%;" />
+
+前景和背景分别蒸馏，使用Mask来区分：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103134947141.png" alt="image-20240103134947141" style="zoom:50%;" />，g表示groundtruth。蒸馏损失：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103135023501.png" alt="image-20240103135023501" style="zoom:80%;" />
+
+
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103133938842.png" alt="image-20240103133938842" style="zoom:80%;" />
+
+***Relational information extraction module (RIEM) and global relation imitation (GRI)***
+
+RIEM的输入是由教师和学生的FPN输出形成的特征图（𝐹∈𝑅𝐶×𝐻×𝑊），它将被送入两个平行的分支
+
+（即中间分支（𝑊1）-> 描述输入特征图的每个位置与所有其他位置之间的关系，
+
+和上分支（𝑊2）-> 描述每个通道对特征图的重要性）。
+
+经过一系列操作后，计算𝑊1（𝐹）和𝑊2（𝐹）的点积，并将其与给定的特征映射𝐹相加，RI的形成：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103140128966.png" alt="image-20240103140128966" style="zoom:70%;" />
+
+然后，通过提取教师的RI来进行全局关系模拟（GRI）。在本文中，作者选择𝐿2损失来转移知识。关系损失的计算方法如下：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103140331862.png" alt="image-20240103140331862" style="zoom:80%;" />
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103135832708.png" alt="image-20240103135832708" style="zoom:80%;" />
+
+最终的损失函数：![image-20240103140418796](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103140418796.png)
+
+**消融：**
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103141234806.png" alt="image-20240103141234806" style="zoom:67%;" />
+
+> 总结：
+
+* 现在有不少OWOD方面的工作倾向于将cls头和reg头解耦，这篇文章发现，cls和reg独立的缺点表现为cls分数低但是reg分数高的预测框通常会被nms干掉所以导致性能次优。因此本文基于cls分数和reg分数的不一致性来着重蒸馏这些特征，从而减小这一块不一致性导致的性能差。
+* 第二个点相关信息的蒸馏，有点像是先对老师和学生的特征分别进行增强（特征位置维度+特征通道维度），然后再做蒸馏。
+
+### 38_Weakly supervised object localization via knowledge distillation based on foreground-background contrast_Neurocomputing 2023_无代码
+
+> 作者：Siteng Ma, Biao Hou, Zhihao Li, Zitong Wu, Xianpeng Guo, Chen Yang, Licheng Jiao
+
+> 贡献：
+
+对于弱监督对象定位(WSOL)任务，尽管基于类激活映射(CAM)的 WSOL 方法得到了广泛的应用，但这些方法并没有考虑到网络在定位过程中可能会过度关注最感兴趣对象的局部区域，从而**忽略了整体信息**。为了解决这一问题，本文引入了一个注意分支，利用多层感知器(MLP)的注意机制来增强网络对全局信息的学习，并通过知识提取来监督 CNN 的在线特征学习，从而提高 WSOL 的定位精度。具体地说，本文利用生成的特征结合对比学习设计了一种新的损失函数，**有效地划分图像的前景和背景**，为后续的分类和定位任务提供了更准确的伪标签。
+
+> 方法：
+
+利用类激活图(CAM)来引导网络预测可能包含目标的区域的方法只能为单个类生成激活映射，这很容易受到类不平衡和遮挡等问题的影响（如图所示，由于网络往往过于关注目标最显著的区域，许多cam往往集中在目标的某一部分，如鸟的头部，这很容易导致目标定位不准确，影响定位精度。）。为了获得更好的定位结果，使网络更加关注弱监督场景下不同类别图像的前景和背景的差异，本文受启发于对比学习，学习弱监督场景下**前景和背景的差异**。许多现有的MLP结构在全局接受野和信息交互方面具有许多优势。为了使网络能够学习更多的全局信息，避免过于关注目标的某一部分，作者提出一种利用**MLP**分支捕获全局信息并优化网络训练的新网络。基于此，合理利用MLP结构中的信息就显得尤为重要。作者提出一种新的网络优化方法，**利用全局信息来监督局部信息**，解决网络过于关注某些cam的问题。
+
+![image-20240103162311870](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103162311870.png)
+
+**Foreground and background contrast**
+
+分别构建前景和背景的正、负样本对，并通过引入前景-背景对比损失来改善个体对个体数据增强的原始对比损失。首先对于输入图像，利用网络提取的特征生成cam，**通过设置阈值对图像的前景和背景进行分割**。为了更好地将相似的前景或背景正样本对拉到一起，避免远距离相似的正样本对对对比学习的影响，借鉴了之前的工作对对比损失添加了权值。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103162948061.png" alt="image-20240103162948061" style="zoom:80%;" />
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103162959709.png" alt="image-20240103162959709" style="zoom:80%;" /><img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103163014771.png" alt="image-20240103163014771" style="zoom:80%;" />
+
+**Incorporation of the MLP branch** & **Feature distillation from MLP to CNN**
+
+CNN的卷积层可以有效地提取局部特征，然而在提取全局特征方面存在局限性。多层感知器作为一种经典的全连接神经网络结构，能够更好地捕获全局信息。其中CycleMLP（Cyclemlp: A mlp-like architecture for dense prediction）是一种新颖的MLP模块（包含自注意力模块和残差链接）。考虑到本文需要让CNN学习到更多的全局信息，使用MLP分支作为教师分支来指导CNN网络的特征学习，使其数据分布趋向于包含全局信息的分布。
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240103163711478.png" alt="image-20240103163711478" style="zoom:50%;" />
+
+> 总结：
+
+* 利用特征图的cam结果根据阈值区分前景和背景进行前景背景对比学习
+* **cyclemlp**特征对cnn特征蒸馏，补充全局信息
+
 # 实验
 
 * idea：结合文本和随机
@@ -2117,3 +2215,13 @@ BiLstm ：双向 Lstm，对所有 ROI 进行双向lstm编码，每个 ROI 特征
 GCN： 参考 **Vision GNN: An Image is Worth Graph of Nodes**，将每个 roi 特征作为一个节点，根据 roi 之间的距离选择 topk 个 roi 作为邻居，进行一次聚合传播。
 
 相对来说，使用roi特征增强都有点效果。
+
+## soft label
+
+|                           | WI     | AOSE  | mAP   | UR    |
+| ------------------------- | ------ | ----- | ----- | ----- |
+| baseline+SRS+OTA+ROI-Attn | 0.0625 | 5,025 | 60.33 | 23.05 |
+| unknown softlable         | 0.0798 | 16413 | 60.70 | 16.11 |
+| all softlable             | 0.0934 | 21765 | 60.38 | 12.73 |
+
+用软标签不仅没有去噪，反而使未知类的检测能力变差---->应该是未知类监督信号变弱导致
