@@ -1818,6 +1818,55 @@ CNN的卷积层可以有效地提取局部特征，然而在提取全局特征�
 * 利用特征图的cam结果根据阈值区分前景和背景进行前景背景对比学习
 * **cyclemlp**特征对cnn特征蒸馏，补充全局信息
 
+## 20240112
+
+### 39_MS-DETR: Efficient DETR Training with Mixed Supervision__
+
+> 作者：Chuyang Zhao12, Yifan Sun1, Wenhao Wang3, Qiang Chen1, Errui Ding1, Yi Yang4, Jingdong Wang1†
+
+> 代码：https://github.com/Atten4Vis/MS-DETR（待上传代码）
+
+> 贡献：
+
+DETR通过基于图像特征迭代生成多个候选对象，并为每个gt匹配一个候选对象来实现端到端目标检测。在原来的DETR中使用一对一监督的传统训练程序缺乏对目标检测候选框的直接监督。
+
+本文的目标是通过**混合一对一监督和一对多监督**来明确监督候选框生成过程以提高DETR训练效率。作者提出==MS-DETR==对用于推理的主解码器的对象查询设置了一对多的监督。与现有的具有一对多监督的DETR变体（如Group DETR和Hybrid DETR）相比，本文的方法不需要额外的解码器分支或对象查询。
+
+几种解码架构的对比：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240112205949740.png" alt="image-20240112205949740" style="zoom:80%;" />
+
+> 方法：
+
+鉴于NMS和自注意+一对一监督作用之间的相似性，本文提出使用一对多的分配监督来明确地提高对象查询的质量和相应的检测候选框。具体做法为对每一层decoder layer采用一个额外的模块来进行一对多的预测：
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240112213008174.png" alt="image-20240112213008174" style="zoom:80%;" />
+
+1m表示one2many
+
+根据每个地面真实对象的匹配分数选择前K个查询，如果其匹配分数低于阈值τ，则过滤掉这些查询。匹配分数综合考虑分类预测分数和与gt的IOU：<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240112213248112.png" alt="image-20240112213248112" style="zoom:80%;" />
+
+结构：图下图c
+
+![image-20240112213314537](https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240112213314537.png)
+
+关于调换自注意和交叉注意的解释：
+
+考虑到DETR**交叉注意**的作用是根据图像特征生成多个候选，**自注意**的作用是收集其他候选框的信息进行重复去除，所以作者将self-attention *→* cross-attention *→* FFN的顺序调换为cross-attention *→* self-attention *→* FFN。这类似于传统的方法，例如Faster R-CNN首先为每个对象生成多个候选对象，然后使用NMS删除重复的候选对象。
+
+b和c的区别：1m监督是对output query VS 1m监督是对internal query
+
+理由：解码器层内的内部对象查询（在交叉注意之后）包含关于每个单独的候选对象的大量信息，而解码器层的输出对象查询（在自注意之后）还包含关于其他候选对象的信息。（不太理解）可能是实验证明c更好一点
+
+<img src="https://raw.githubusercontent.com/yuki1ssad/typora_images/main/image-20240112214003079.png" alt="image-20240112214003079" style="zoom:80%;" />
+
+注意：即便加了1m监督，如果不调换CA和SA的顺序，效果反而更差。作者解释：原因可能是监督位置与交叉注意和自我注意的作用不一致：交叉注意主要是为了产生多个候选框，而自注意收集其他候选人的信息主要是为了提炼最终的候选框。
+
+> 总结：
+
+* 亮点：关于自注意力和交叉注意力作用的提炼
+* 自注意力：不同的query之间做交互，强者更强；交叉注意力：query和图片特征做交互，为目标对象选候选query。
+
 # 实验
 
 * idea：结合文本和随机
@@ -2225,3 +2274,9 @@ GCN： 参考 **Vision GNN: An Image is Worth Graph of Nodes**，将每个 roi �
 | all softlable             | 0.0934 | 21765 | 60.38 | 12.73 |
 
 用软标签不仅没有去噪，反而使未知类的检测能力变差---->应该是未知类监督信号变弱导致
+
+## ore+SRS
+
+直接将S0.5R5S0.8套在ore上，模型没有检测未知类对象的能力，mAP甚至还会降1左右。
+
+分析原因是S0.8阈值太高，导致未知类伪标签不充分。
